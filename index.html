@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<script src='https://d3js.org/d3.v5.min.js'></script>
+<style> circle {fill: lightblue; stroke: black;} </style>
+<body onload='init();'>
+<svg width=300 height=300>
+</svg>
+<script>
+async function init() {
+     // Read the Data
+     data = await d3.csv("https://flunky.github.io/cars2017.csv");
+     var margin=50
+     var width=200
+     var height=200
+     //console.log(data[0])
+     var AverageCityMPG = [], AverageHighwayMPG = [], EngineCylinders = [];
+     data.map(function(d) {
+	         AverageCityMPG.push(d.AverageCityMPG);
+			 AverageHighwayMPG.push(d.AverageHighwayMPG);
+			 EngineCylinders.push(d.EngineCylinders);
+     });
+	 
+	 //console.log(EngineCylinders)
+     x = d3.scaleLog().domain([10,150]).range([0,width])
+     y = d3.scaleLog().domain([10,150]).range([height,0])
+     
+     d3.select('svg')
+       .append('g')
+       .attr("transform","translate(50,50)")
+       .selectAll('circle')
+	   .data(data)
+	   .enter()
+	   .append('circle')
+       .attr('cx', function(d,i) {return x(d.AverageCityMPG)})
+	   .attr('cy', function(d,i) {return y(d.AverageHighwayMPG)})
+	   .attr('r', function(d,i) {return (2+(+d.EngineCylinders))}) // For Sum add an additional + inside d.EngineCylinders
+
+     // Plot Y Axis
+     d3.select('svg').append('g')
+       .attr("transform","translate(50,50)")
+       .call(d3.axisLeft(y).tickValues([10,20,50,100]).tickFormat(d3.format("~s")))
+     
+     // Plot X Axis
+     d3.select('svg').append('g')
+       .attr("transform", "translate(50,250)")
+       .call(d3.axisBottom(x).tickValues([10,20,50,100]).tickFormat(d3.format("~s")))
+     
+
+     }
+</script>
+</body>
+</html>
