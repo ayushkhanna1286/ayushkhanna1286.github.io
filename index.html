@@ -24,26 +24,12 @@ async function init() {
 	 const parseTime = d3.timeParse("%d-%b-%y")
 const timeFormat = d3.timeFormat("%d-%b-%y")
 
-//Skipping setting domains for sake of example
-const x = d3.scaleTime().range([0, 800])
-const y = d3.scaleLinear().range([300, 0])
-
 const makeAnnotations = d3.annotation()
   .editMode(true)
   //also can set and override in the note.padding property
   //of the annotation object
   .notePadding(15)
   .type(type)
-  //accessors & accessorsInverse not needed
-  //if using x, y in annotations JSON
-  .accessors({
-    x: d => x(parseTime(d.date)),
-    y: d => y(d.close)
-  })
-  .accessorsInverse({
-     date: d => timeFormat(x.invert(d.x)),
-     close: d => y.invert(d.y)
-  })
   .annotations(annotations)
 			   
      data = await d3.csv("https://flunky.github.io/cars2017.csv");
