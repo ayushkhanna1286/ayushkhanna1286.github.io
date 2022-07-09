@@ -4,7 +4,7 @@
 <script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
 <style> circle {fill: lightblue; stroke: black;} </style>
 <body onload='init();'>
-<svg width=300 height=300>
+<svg width=500 height=500>
 </svg>
 <script>
 async function init() {
@@ -29,8 +29,8 @@ async function init() {
                              .type(type)
                              .annotations(annotations)
      var margin=50
-     var width=200
-     var height=200
+     var width=400
+     var height=400
      //console.log(data[0])
      var AverageCityMPG = [], AverageHighwayMPG = [], EngineCylinders = [];
      data.map(function(d) {
@@ -40,8 +40,8 @@ async function init() {
      });
 	 
 	 //console.log(EngineCylinders)
-     x = d3.scaleLog().domain([10,150]).range([0,width])
-     y = d3.scaleLog().domain([10,150]).range([height,0])
+     x = d3.scaleLog().domain([10,350]).range([0,width])
+     y = d3.scaleLog().domain([10,350]).range([height,0])
      
      d3.select('svg')
        .append('g')
@@ -57,12 +57,12 @@ async function init() {
      // Plot Y Axis
      d3.select('svg').append('g')
        .attr("transform","translate(50,50)")
-       .call(d3.axisLeft(y).tickValues([10,20,50,100]).tickFormat(d3.format("~s")))
+       .call(d3.axisLeft(y).tickValues([10,20,50,100,150,200,250,300]).tickFormat(d3.format("~s")))
      
      // Plot X Axis
      d3.select('svg').append('g')
        .attr("transform", "translate(50,250)")
-       .call(d3.axisBottom(x).tickValues([10,20,50,100]).tickFormat(d3.format("~s")))
+       .call(d3.axisBottom(x).tickValues([10,20,50,100,150,200,250,300]).tickFormat(d3.format("~s")))
      
      d3.select('svg').append('g')
 	   .attr("class", "annotation-group")
