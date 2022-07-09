@@ -72,6 +72,7 @@ const makeAnnotations = d3.annotation()
        .attr('cx', function(d,i) {return x(d.AverageCityMPG)})
 	   .attr('cy', function(d,i) {return y(d.AverageHighwayMPG)})
 	   .attr('r', function(d,i) {return (2+(+d.EngineCylinders))}) // For Sum add an additional + inside d.EngineCylinders
+	   .attr("class", "annotation-group")
 	   .call(makeAnnotations)
 
      // Plot Y Axis
