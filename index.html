@@ -61,7 +61,7 @@ async function init() {
      
      // Plot X Axis
      d3.select('svg').append('g')
-       .attr("transform", "translate(50,450)")
+       .attr("transform", "translate(50,250)")
        .call(d3.axisBottom(x).tickValues([10,20,50,100,150,200,250,300]).tickFormat(d3.format("~s")))
      
      d3.select('svg').append('g')
