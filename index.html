@@ -168,6 +168,13 @@ async function init() {
                 .append("text")
                 .text(function(d,i){return(years[i])})
                 .style('font-weight', 600)
+	// When the button is changed, run the updateChart function
+    d3.select("#selectxdropdown").on("change", function(d) {
+        // recover the option that has been chosen
+        var selectedOption = d3.select(this).property("value")
+        // run the updateChart function with this selected option
+        update_axis(selectedOption)
+    })
      //Add years as rectangles and onclick logic to change chart
      d3.select("svg")
        .selectAll("g")
@@ -208,7 +215,8 @@ async function init() {
                else select_year = Number(d);
                let id_selected = "#year" + String(select_year)
                //console.log("select_year:"+select_year)
-			   d3.select(id_selected).attr("fill", "blue")
+			   d3.select(id_selected).attr("fill", "lightblue")
+			   var selectedOption = d3.select('#selectxdropdown').property("value")
 			   update_axis(selectedOption)
 			   //plot_points("Avg_ Birth Rate (Per 1000) (SUM)")
                //show_year_annotation(select_year)
@@ -231,14 +239,6 @@ async function init() {
       .attr("value", function (d) { return d; }) // corresponding value returned by the button
 
 	 let chart = d3.select("#chart")
-
-	// When the button is changed, run the updateChart function
-    d3.select("#selectxdropdown").on("change", function(d) {
-        // recover the option that has been chosen
-        var selectedOption = d3.select(this).property("value")
-        // run the updateChart function with this selected option
-        update_axis(selectedOption)
-    })
 	
 	 //Filter dataset to be just the year selected
      let select_year_data = data.filter(function(e){return (e.Year==select_year)})
@@ -255,8 +255,6 @@ async function init() {
                     let birth_rate = x(Number(d["Avg_ Birth Rate (Per 1000) (SUM)"]))
                     let death_rate = y(Number(d["Avg_ Death Rate (Per 1000) (SUM)"]))
                     return "translate(" + birth_rate + "," + death_rate + ")"; })
-       //.attr('cx', function(d,i) {return x(d["Avg_ Birth Rate (Per 1000) (SUM)"])})
-	   //.attr('cy', function(d,i) {return y(d["Avg_ Death Rate (Per 1000) (SUM)"])})
 	   .attr('r', function(d,i) {return csize(d["Avg_ Total Population (SUM)"])/380})
        .attr("id", function(d){return d["Country Code (WDICountry_csv)"]}) 
        .style("fill", function(d){ return c_col(d.Region)})
@@ -356,6 +354,17 @@ async function init() {
        .text("Avg. Death Rate (Per 1000)");
      }
 	 
+	 var yeartag = d3.select("svg").append("text")
+       .attr("class", "yeartag")
+       .attr("text-anchor", "end")
+       .attr("x", 1300)
+       .attr("y", 100)
+       .style('fill', 'DarkGrey')
+       .style('font-weight', 'bold')
+	   .style('font-size',"50px")
+       .text(select_year)
+	   .attr("opacity",0.35)
+
 	// A function that update the chart
     function update_axis(selectedGroup) {
 	 let chart = d3.select("#chart")
@@ -444,12 +453,13 @@ async function init() {
     }
     function plot_points(X_Col,selectedGrp)
 	{
-        d3.select("#chart").selectAll("circle").data(clear_all).exit().remove()
+        //d3.select("#chart").selectAll("circle").data(clear_all).exit().remove()
         let cur_x = 0
         let cur_y = 0
         let max_val = 0
 		let min_val = 1000 
-		console.log("selectedGrp:"+selectedGrp)
+		console.log("year:"+select_year)
+		//console.log("selectedGrp:"+selectedGrp)
 		let select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0)})
 		if (selectedGrp == "BirthRate") {select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(e["Avg_ Death Rate (Per 1000) (SUM)"]))})}
 		else if (selectedGrp == "HealthSpend") {select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Health Spend / Capita ($) (SUM)"] != 0 && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0)})}
@@ -474,7 +484,7 @@ async function init() {
 			//console.log("min_val:"+min_val)
 			//console.log("max_val:"+max_val)
 			if (selectedGrp == "BirthRate") {
-			                x = d3.scaleLinear().domain([5,max_val+5]).range([0,width])
+			                x = d3.scaleLinear().domain([4,max_val+5]).range([0,width])
 			}
 			else if (selectedGrp == "LifeExp") {
 			                x = d3.scaleLinear().domain([42,max_val+5]).range([0,width]);
@@ -500,14 +510,11 @@ async function init() {
             if (x_col != 0 && selected_region.indexOf(region)>-1) {
                     d3.select("#" + country ).datum(select_year_data[i])
 			}
-			else {
-			      console.log("x_col:"+x_col)
-			      d3.select("#" + country).attr("opacity",0.05);
-			}
         }
 		// Re-Plot X Axis again
         d3.select('svg').selectAll('g.xaxis').transition().duration(1000).call(d3.axisBottom(x).tickFormat(d3.format("~d")))
-	    d3.select('#x label').text("Avg. Life Expectancy")
+	    //xlabel.text("Avg. Life Expectancy")
+		yeartag.text(select_year)
     }	
 </script>
 </body>
