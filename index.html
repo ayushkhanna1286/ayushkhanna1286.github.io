@@ -444,7 +444,7 @@ async function init() {
     }
     function plot_points(X_Col,selectedGrp)
 	{
-        //d3.select("#chart").selectAll("circle").data(clear_all).exit().remove()
+        d3.select("#chart").selectAll("circle").data(clear_all).exit().remove()
         let cur_x = 0
         let cur_y = 0
         let max_val = 0
@@ -453,7 +453,7 @@ async function init() {
 		let select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0)})
 		if (selectedGrp == "BirthRate") {select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(e["Avg_ Death Rate (Per 1000) (SUM)"]))})}
 		else if (selectedGrp == "HealthSpend") {select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Health Spend / Capita ($) (SUM)"] != 0 && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0)})}
-		else if (selectedGrp == "LifeExp") {select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Life Expectancy (SUM)"] != 0 && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0)})}
+		else if (selectedGrp == "LifeExp") {select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Life Expectancy (SUM)"] != 0 && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(e["Avg_ Life Expectancy (SUM)"]))})}
 		
         //let select_year_data = data.filter(({ Region, Year}) => selected_region.includes(Region) && Year==select_year )
 		//data.filter(function(d){return (d.Year==select_year)})
@@ -494,10 +494,16 @@ async function init() {
                 d3.select("#" + country).attr("opacity",0.05);
 				//d3.select("#" + country ).transition(t).attr("transform", "translate(" + x(x_col) + "," + y(death_rate) + ")")
             } 
-            d3.select("#" + country ).transition(t).attr("transform", "translate(" + x(x_col) + "," + y(death_rate) + ")")
+            
+			d3.select("#" + country ).transition(t).attr("transform", "translate(" + x(x_col) + "," + y(death_rate) + ")")
+			
             if (x_col != 0 && selected_region.indexOf(region)>-1) {
-                         d3.select("#" + country ).datum(select_year_data[i])
-					}
+                    d3.select("#" + country ).datum(select_year_data[i])
+			}
+			else {
+			      console.log("x_col:"+x_col)
+			      d3.select("#" + country).attr("opacity",0.05);
+			}
         }
 		// Re-Plot X Axis again
         d3.select('svg').selectAll('g.xaxis').transition().duration(1000).call(d3.axisBottom(x).tickFormat(d3.format("~d")))
