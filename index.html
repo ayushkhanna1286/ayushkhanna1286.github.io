@@ -1067,7 +1067,7 @@ async function init() {
             .attr("x", x('2020')+10)
             .attr("y", y(max_line2_col_val))
             .style("font", "12px sans-serif")
-            .text(function(d) { return line2_text })
+            .text(function(d) { return line2_text})
 			.style('fill', 'darkred');
 		if (dropdownsel == "BirthRate") {
 		// #####################  Regional Avg. Birth Rate Line #######################	
@@ -1095,7 +1095,7 @@ async function init() {
 							.style("opacity", .9);
 					div.html(function(){return "<b>" + d[line3_col]
 											})
-					.style("left", (d3.event.pageX) + "px")     
+						.style("left", (d3.event.pageX) + "px")     
 						.style("top", (d3.event.pageY - 28) + "px")
 					})
 		.on("mouseout", function(d) {       
@@ -1160,6 +1160,13 @@ async function init() {
 			.attr('x',50)
 			.attr('y',10)
 			.call(wrap, 650)
+		line.append("text").text("(To see Regional Values, hover your mouse on the dots in Line)")
+	        .attr("class", "MouseHoverText1")
+            .style('fill', 'darkred')
+	        .style('font-size',"16px")
+			.style('opacity',0.5)
+			.attr('x',450)
+			.attr('y',580)
 		// Clear text
 		secondsvg.select('.SecondSVGHeadingText1').remove()
 		secondsvg.select('.SecondSVGText1').remove()
@@ -1170,6 +1177,7 @@ async function init() {
 		secondsvg.select('.SecondSVGText6').remove()
 		secondsvg.select('.SecondSVGText7').remove()
 		secondsvg.select('.SecondSVGText8').remove()
+		secondsvg.select('.MouseHoverText1').remove()
 		// Call annotations
 		enabledisableAnnotation_Line(annotation_deathbirth_arr,x('2020')+10,y(max_line1_col_val),y(max_line2_col_val),dropdownsel)
 		// Add Bar Chart
@@ -1216,8 +1224,9 @@ async function init() {
 	     
 		 
 	}
-	// Reference URL: https://newbedev.com/wrapping-text-in-d3
-	function wrap(text, width) {
+// Reference URL: https://newbedev.com/wrapping-text-in-d3
+function wrap(text, width) 
+{
     text.each(function () {
         var text = d3.select(this),
             words = text.text().split(/\s+/).reverse(),
@@ -1248,9 +1257,10 @@ async function init() {
             }
         }
     });
-    }
+}
 
-	function findcol_Name(selectedGroup) {
+function findcol_Name(selectedGroup) 
+{
 	if (selectedGroup == "BirthRate") {
 	        col = "Avg_ Birth Rate (Per 1000) (SUM)"
 		}
@@ -1261,10 +1271,10 @@ async function init() {
 	        col = "Avg_ Life Expectancy (SUM)"
 	  }
 	 return col
-	}
-	
-	// #########################################################################################################
-function RegionSelected(object){
+}
+// #########################################################################################################
+function RegionSelected(object)
+{
         let checked = object.checked
         let clicked_region = object.id
         if (!checked){
@@ -1316,7 +1326,7 @@ function RegionSelected(object){
 function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,index_pos,yrange,index_max_pos,regionslen)
 {
 	 let chart = d3.select("#chart")
-	 const type = d3.annotationXYThreshold
+	 //const type = d3.annotationXYThreshold
 	 const type_sec = d3.annotationCallout
 	 const type_rec = d3.annotationCalloutRect
 	 var minxval = 0, minyval=0
@@ -1602,8 +1612,8 @@ function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,ind
 	  .attr("class", "annotation-group3")
 	  .call(makeAnnotations_highest_val)
 }
-	function enabledisableAnnotation_Line(annotation_deathbirth_arr,xval,yval,ydval,dropdownsel)
-	{
+function enabledisableAnnotation_Line(annotation_deathbirth_arr,xval,yval,ydval,dropdownsel)
+{
 		const birth_anno_type = d3.annotationCallout
 		var birth_rate_annotations
 		var birtharr_len = annotation_deathbirth_arr.length
@@ -1679,7 +1689,7 @@ function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,ind
           .call(make_birthdeath_rate_annotations)
 	}
 function plot_circles(X_Col,selectedGrp)
-	{
+{
         let cur_x = 0
         let cur_y = 0
         let max_val = 0
@@ -1717,7 +1727,6 @@ function plot_circles(X_Col,selectedGrp)
 						d3.select(".annotation-group7").remove();
 						d3.select('svg').selectAll('.lifeexpline1').remove();
 						d3.select('svg').selectAll('.lifeexpline2').remove();
-						//enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange=x,min_val,index_pos,yrange=y)
 						}
 		else if (selectedGrp == "HealthSpend") {
 						select_year_data = data.filter(function(d){return (d.Year==select_year && d["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(d["Avg_ Death Rate (Per 1000) (SUM)"]))})
@@ -1830,7 +1839,6 @@ function plot_circles(X_Col,selectedGrp)
 				d3.select(".annotation-group4").remove();
 				d3.select(".annotation-group5").remove();
 				d3.select(".annotation-group7").remove();
-				// opacity Zero does disappers the circle but mousehover can still happens
 			}	
 			if (xcol != '') {
 				d3.select("#" + country ).transition(t).attr("transform", "translate(" + x(xcol) + "," + y(death_rate) + ")")
