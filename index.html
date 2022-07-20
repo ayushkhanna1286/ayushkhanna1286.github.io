@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html>
+<head><title>CS416-Narrative Visualization Dashboard</title></head>
 <script src='https://d3js.org/d3.v5.min.js'></script>
 <script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
 <link href='https://fonts.googleapis.com/css?family=Lato:300,900' rel='stylesheet' type='text/css'>
 <style>
-    div.tooltip {
+ div.tooltip {
         position: absolute;
         text-align: center;
         width: 180px;
@@ -16,7 +17,30 @@
         border-radius: 8px;
         pointer-events: none;
     }
-
+ div.linetooltip {
+        position: absolute;
+        text-align: center;
+        width: 80px;
+        height: 20px;
+        padding: 5px;
+        font: 14px sans-serif;
+        background: orange;
+        border: 0px;
+        border-radius: 8px;
+        pointer-events: none;
+    }
+ div.bartooltip {
+        position: absolute;
+        text-align: center;
+        width: 100px;
+        height: 20px;
+        padding: 5px;
+        font: 14px sans-serif;
+        background: lightgrey;
+        border: 0px;
+        border-radius: 8px;
+        pointer-events: none;
+    }
 .dropdown-content {
   display: none;
   position: absolute;
@@ -25,7 +49,7 @@
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
   z-index: 1;
 }
-
+  /* .rect_bar {fill: pink; stroke: black; opacity: 0.35} */
     svg {
         background-color: GhostWhite;
         font-family: 'Lato';
@@ -34,25 +58,19 @@
     .annotation-group, text.title {
         font-size: .8em;
     }
-    :root {
-        --annotation-color: #E8336D;
+	.annotation-birth-group, text.title {
+        font-size: .8em;	
+    }
+	.annotation-death-group, text.title {
+        font-size: .8em;	
+    }
+	.annotation-group1, .annotation-group2, .annotation-group3, .annotation-group4, .annotation-group5, .annotation-group6,.annotation-group7 {
+        font-size: .8em;
     }
 	line {
        stroke:#eae4e4;
      }
-	.annotation path {
-        stroke: var(--annotation-color);
-        fill: rgba(0,0,0,0);
-      }
-	.annotation path.connector-arrow{
-        fill: var(--annotation-color);
-      }
-
-      .annotation text {
-        fill: var(--annotation-color);
-      }
-
-      .annotation-title {
+     .annotation-title {
         font-weight: bold;
       }
 
@@ -75,19 +93,41 @@
     text.title {
         font-size: .10em;
     }
+.header img {
+		float: left;
+		width: 250px;
+		height: 100px;
+}
+.header h2 {
+  position: relative;
+  top: 18px;
+  left: 10px;
+}
 	
 	/* circle {fill: lightblue; stroke: black;} */
 	circle {stroke: black;}
 </style>
 <body onload='init();'>
-<h2> World Indicator - Death Rates vs Birth Rates Comparison </h2><br/>
+<div class="header">
+<img src="https://ayushkhanna1286.github.io/UIUC-Logo.png"/>
+<h1> World Indicators - Countries Comparison of Death Rate with Birth Rate, Health Spend and Life Expectancy</h1>
+<a href="https://datatopics.worldbank.org/world-development-indicators/"target="_blank">[DataSet Source - World Development Indicator]</a>
+</br>
+</br>
+</div> 
+
 <!-- Initialize a select button -->
-<div><select id="selectxdropdown"></select></div>
-<svg width=1500 height=700>
-</svg>
-<svg id="linesvg" width=350 height=700></svg>
+<!-- <div><select id="selectxdropdown"></select></div> -->
+<div id="radiobutton">
+  <b>Select X-Axis to Change the View for Comparison:</b>
+  <input type="radio" id="selectxdropdown" name="Xaxis" value="BirthRate" checked onclick='get_radiovalue("BirthRate")'> Birth Rate
+  <input type="radio" id="selectxdropdown "name="Xaxis" value="HealthSpend" onclick='get_radiovalue("HealthSpend")'> Health Spend
+  <input type="radio" id="selectxdropdown" name="Xaxis" value="LifeExp" onclick='get_radiovalue("LifeExp")'> Life Expectancy
+</div>
+</br>
+<svg id="main" width=1500 height=700></svg>
+<svg id="linesvg" width=370 height=700></svg>
 <script>
-	 let FuelType = []
 	 let selected_regions = []
 	 let tickval = []
 	 let years = ["<<=", 2010, 2011, 2012, 2013, 2014, 2015,2016,2017,2018,2019,2020,"=>>"]
@@ -95,67 +135,27 @@
 	 var margin=50
      var width=1400 //1600
      var height=600
-	 var sec_line_width=370
+	 var sec_line_width=330
+	 var sec_margin=20
+	 var sec_line_height=370
+	 var barWidth = (sec_line_width / 10) // 10 Years
 	 var line_width=1400//370
 	 var line_height=600
 	 let svg_dim = 600
 	 var xlabel = ""
 	 let year_axis = [2010, 2011, 2012, 2013, 2014, 2015,2016,2017,2018,2019,2020]
+	 var min_val_p = 0
+	 var max_val_p
+	 var selectedOption = "BirthRate"
+	 var birthrate_var_threshold = 2, deathrate_var_threshold = 2
+	 
+function get_radiovalue(selectedRadioValue) {
+	selectedOption = selectedRadioValue
+}
 async function init() {
      // Read the Data   
      data = await d3.csv("https://ayushkhanna1286.github.io/WDI_Tableau_Data.csv");
 	 let select_year_data = data.filter(function(d){return (d.Year==select_year && d["Avg_ Death Rate (Per 1000) (SUM)"] != 0)}); 
-	 const type = d3.annotationXYThreshold
-	 const type_sec = d3.annotationXYThreshold
-	 //d3.annotationCalloutCircle
-	 //const type = d3.annotationLabel
-	 const high_deathbirth_rate_annotations = [{
-           note: {
-                 label: "Sub-Saharan Africa Countries have High Birth (>35) and Death Rates (>10) over the Years",
-                 bgPadding: 5,
-                 title: "High Death and Birth Rate"
-           },
-           //can use x, y directly instead of data
-           dx:100,//
-           dy:160, // dx and dy To increase Annotation line
-		   x:1250, //1410
-		   y:260,
-		   subject: {
-		            //width: -350,
-					//height: 200,
-                    y1: 190,
-                    y2: 350,
-            },
-			className:"annotation_high_deathbirth_rate"
-     }]
-
-	 const high_deathrate = [{
-           note: {
-                 label: "Countries Observed a Decrease in Population due to Higher Death Rate than Birth Rate",
-                 bgPadding: 1,
-                 title: "Decrease in the Population"
-           },
-           //can use x, y directly instead of data
-           dx:40,// To increase Annotation line in X Direction
-           dy:-20, // To increase Annotation line in Y Direction
-		   x:320, // X Location of Annotation
-		   y:185, // Y Location of Annotation
-		   subject: {
-                    x1: 100,
-                    x2: 340,
-            },
-			className:"annotation_high_deathrate"
-     }]
-	 
-     const makeAnnotations_highdthbrth_rate = d3.annotation().editMode(false)
-                             .notePadding(15)
-                             .type(type)
-                             .annotations(high_deathbirth_rate_annotations)
-
-     const makeAnnotations_highdeath_rate = d3.annotation()//.editMode(true)
-                             .notePadding(5)
-                             .type(type_sec)
-                             .annotations(high_deathrate)
 
 	 clear_circles = []
 	 //d3.select('svg').selectAll('chart').data(clear_circles).exit().remove()
@@ -167,91 +167,33 @@ async function init() {
 	 
      x = d3.scaleLinear().domain([4,55]).range([0,width])
      y = d3.scaleLinear().domain([0,20]).range([height,0]) //0,20
-	 z = d3.scaleTime().domain([2010,2020]).range([10,sec_line_width-50])
-	 w = d3.scaleLinear().domain([0,55]).range([300,45])
-     c_col = d3.scaleOrdinal().domain(Region).range([ "#440154ff", "#21908dff", "darkorange","red","green","pink","brown"])
+     c_col = d3.scaleOrdinal().domain(Region).range([ "darkgreen", "#440154ff", "darkorange","red","brown","#21908dff","pink"])
 	 csize = d3.scaleLog().domain([10,50]).range([0,670])
-
-     // Select Second SVG element
-	 var secondsvg = d3.select('#linesvg')
-       .append('g')
-	   .attr("id", "section2")
-       .attr("transform","translate("+ margin + "," + margin + ")")
-	 
-	 secondsvg.append("text")
-	          .text("The Scatter Chart on Left shows the Death Rate and Birth Rate Comparison Over the Years")
-	          .attr("class", "HeadingText1")
-              .style('fill', 'DarkGreen')
-              .style('font-weight', 'bold')
-	          .style('font-size',"15px")
-			  .style('opacity',0.9)
-			  .attr('x',-35)
-			  .attr('y',5)
-			  .call(wrap, 320)
+ 
 	 add_year_slider(years)
 
      d3.select('svg')
        .append('g')
 	   .attr("id", "chart")
        .attr("transform","translate("+ margin + "," + margin + ")")
-	  	 
- 	// add the options to the button
-    d3.select("#selectxdropdown")
-      .selectAll('myOptions')
-      .data(XAxis_Group)
-      .enter()
-      .append('option')
-      .text(function (d) { return d; }) // text showed in the menu
-      .attr("value", function (d) { return d; }) // corresponding value returned by the button
 
 	// When the button is changed, run the updateChart function
-    d3.select("#selectxdropdown").on("change", function(d) {
+    d3.selectAll("input[name='Xaxis']").on("change", function(d) {
         // recover the option that has been chosen
+		var value = d3.select('input[name="Xaxis"]:checked').node().value;
         var selectedOption = d3.select(this).property("value")
-		secondsvg.selectAll("text").remove() // Clear Old Text before replacing it with the new one.
-		if (selectedOption == "BirthRate") {
-			secondsvg.append("text").text("The Scatter Chart on Left shows the Death Rate (Y-Axis) and Birth Rate (X-Axis) Comparison Over the Years")
-	                 .attr("class", "HeadingText1")
-                     .style('fill', 'DarkGreen')
-                     .style('font-weight', 'bold')
-	                 .style('font-size',"15px")
-					 .style('opacity',0.9)
-					 .attr('x',-35)
-					 .attr('y',10)
-					 .call(wrap, 320)
-		}
-	    else if (selectedOption == "LifeExp"){
-			secondsvg.append("text").text("The Scatter Chart on Left shows the Death Rate comparison (Y-Axis) with Avg. Life Expectancy (X-Axis) for Countries")
-	                 .attr("class", "HeadingText1")
-                     .style('fill', 'DarkGreen')
-                     .style('font-weight', 'bold')
-	                 .style('font-size',"15px")
-					 .style('opacity',0.9)
-					 .attr('x',-35)
-					 .attr('y',10)
-					 .call(wrap, 320)
-		}
-	    else if (selectedOption == "HealthSpend"){
-			secondsvg.append("text").text("The Scatter Chart on Left shows the Death Rate comparison (Y-Axis) with Health Spend/Capita (In US$) (X-Axis) for Countries")
-	                 .attr("class", "HeadingText1")
-                     .style('fill', 'DarkGreen')
-                     .style('font-weight', 'bold')
-	                 .style('font-size',"15px")
-					 .style('opacity',0.9)
-					 .attr('x',-35)
-					 .attr('y',10)
-					 .call(wrap, 320)
-		}  
         // run the updateChart function with this selected option
         update_axis(selectedOption)
     })
 	let chart = d3.select("#chart")
-	var selectedOption = d3.select('#selectxdropdown').property("value")
+	// Section to Details inside Second SVG element
+	var secondsvg = d3.select('#linesvg')
+	var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value
+	//var selectedOption = d3.select('#selectxdropdown').property("value")
 	//Add a Tooltip DIV Tag
 	var div = d3.select("body").append("div")
                 .attr("class", "tooltip")
                 .style("opacity", 0);
-
 	chart.selectAll("g")
 	     .data(select_year_data)
 	     .enter()
@@ -263,13 +205,47 @@ async function init() {
 	     .attr('r', function(d,i) {return csize(d["Avg_ Total Population (SUM)"])/380})
          .attr("id", function(d){return d["Country Code (WDICountry_csv)"]}) 
          .style("fill", function(d){ return c_col(d.Region)})
-         .attr("opacity",0.8)
+         .attr("opacity",0.65)
 	   // Add Tooltip to show the Details on mouse over
-        .on("mouseover", function(d) {      
+         .on("mouseover", function(d) {      
                         div.transition()     
                            .duration(200)      
                            .style("opacity", .9);
-						var selectedOption = d3.select('#selectxdropdown').property("value")
+						secondsvg.append("text")
+						  		.text("Country Selected: "+d["Country Name"])
+						 		.attr("class", "SecondSVGCntry")
+								.style('fill', 'DarkGreen')
+								.style('font-weight', 'bold')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',35)
+			                    .attr('y',520) 
+					   secondsvg.append("text")
+						  		.text("Country's Region: "+d["Region"])
+						 		.attr("class", "SecondSVGRgn")
+								.style('fill', 'black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',550) 
+					   secondsvg.append("text")
+						  		.text("Income Group: "+d["Income Group"])
+						 		.attr("class", "SecondSVGIncGrp")
+								.style('fill', 'Black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',580)
+						secondsvg.append("text")
+						  		.text("Total Population: "+d["Avg_ Total Population (SUM)"])
+						 		.attr("class", "SecondSVGPop")
+								.style('fill', 'Black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',610)								
+						var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
+						//var selectedOption = d3.select('#selectxdropdown').property("value")
 						if (selectedOption == "BirthRate") {
 						div.html(function(){return "<b>" + d["Country Name"] + "</b>" + "<br/> Total Population:"+ d["Avg_ Total Population (SUM)"]
 											             + "<br/> Avg. Birth Rate:" +d["Avg_ Birth Rate (Per 1000) (SUM)"]
@@ -278,6 +254,22 @@ async function init() {
 						)
 						.style("left", (d3.event.pageX) + "px")     
                         .style("top", (d3.event.pageY - 28) + "px")
+						secondsvg.append("text")
+						  		.text("Avg. Life Expectancy: "+d["Avg_ Life Expectancy (SUM)"])
+						 		.attr("class", "SecondSVGLifeExp")
+								.style('fill', 'Black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',640)
+						secondsvg.append("text")
+						  		.text("Avg. Health Spend: $"+d["Avg_ Health Spend / Capita ($) (SUM)"])
+						 		.attr("class", "SecondSVGHealthSpend")
+								.style('fill', 'Black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',670)
 						} // end of if statement
 						else if (selectedOption == "LifeExp") {
 								div.html(function(){return "<b>" + d["Country Name"] + "</b>" + "<br/> Total Population.:"+ d["Avg_ Total Population (SUM)"]
@@ -287,6 +279,22 @@ async function init() {
 						)
 						.style("left", (d3.event.pageX) + "px")     
                         .style("top", (d3.event.pageY - 28) + "px")
+						secondsvg.append("text")
+						  		.text("Avg. Birth Rate: "+d["Avg_ Birth Rate (Per 1000) (SUM)"])
+						 		.attr("class", "SecondSVGBirthRate")
+								.style('fill', 'Black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',640)
+						secondsvg.append("text")
+						  		.text("Avg. Health Spend: $"+d["Avg_ Health Spend / Capita ($) (SUM)"])
+						 		.attr("class", "SecondSVGHealthSpend")
+								.style('fill', 'Black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',670)
 						} // end of else if statement
 						else if (selectedOption == "HealthSpend") {
 								div.html(function(){return "<b>" + d["Country Name"] + "</b>" + "<br/> Total Population:"+ d["Avg_ Total Population (SUM)"]
@@ -296,42 +304,56 @@ async function init() {
 						)
 						.style("left", (d3.event.pageX) + "px")     
                         .style("top", (d3.event.pageY - 28) + "px")
+						secondsvg.append("text")
+						  		.text("Avg. Birth Rate: "+d["Avg_ Birth Rate (Per 1000) (SUM)"])
+						 		.attr("class", "SecondSVGBirthRate")
+								.style('fill', 'Black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',640)
+						secondsvg.append("text")
+						  		.text("Avg. Life Expectancy: "+d["Avg_ Life Expectancy (SUM)"])
+						 		.attr("class", "SecondSVGLifeExp")
+								.style('fill', 'Black')
+								.style('font-size',"18px")
+			                    .style('opacity',0.9)
+			                    .attr('x',25)
+			                    .attr('y',670)
 						} // end of else if statement            
 		})
        .on("mouseout", function(d) {       
                      div.transition()        
                      .duration(500)      
-                     .style("opacity", 0);   
+                     .style("opacity", 0); 
+					secondsvg.select(".SecondSVGIncGrp").remove();
+					secondsvg.select(".SecondSVGCntry").remove();
+					secondsvg.select(".SecondSVGPop").remove();
+					secondsvg.select(".SecondSVGLifeExp").remove();
+					secondsvg.select(".SecondSVGHealthSpend").remove();
+					secondsvg.select(".SecondSVGBirthRate").remove();
+					secondsvg.select(".SecondSVGRgn").remove();
         })
 	   .on("click", function (d) {
+				var secondsvg = d3.select('#linesvg')
 				//var mouse = d3.mouse(this);
-				secondsvg.select("path").selectAll(".birthline").remove()
+				//secondsvg.select("path").selectAll(".birthline").remove()
 				var cntry_code = d["Country Code (WDICountry_csv)"]
-				console.log("cntry_code:"+cntry_code)
-				var select_line_data = data.filter(function(d){return (d["Avg_ Birth Rate (Per 1000) (SUM)"] != 0 && d["Country Code (WDICountry_csv)"] == cntry_code)});
 				div.transition().duration(500).style("opacity", 0)
-				// remove all circles from the Scatter chart and make the line chart
-				update_chart_to_line(cntry_code,select_line_data,select_year,selectedOption)		
+				var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
+				if (selectedOption == "BirthRate") {
+					var select_line_data = data.filter(function(d){return (d["Avg_ Birth Rate (Per 1000) (SUM)"] != 0 && d["Country Code (WDICountry_csv)"] == cntry_code)});
+				}
+				else if (selectedOption == "LifeExp") {
+					var select_line_data = data.filter(function(d){return (d["Avg_ Life Expectancy (SUM)"] != 0 && d["Country Code (WDICountry_csv)"] == cntry_code)});
+				}
+				else if (selectedOption == "HealthSpend") {
+					var select_line_data = data.filter(function(d){return (d["Avg_ Health Spend / Capita ($) (SUM)"] != 0 && d["Country Code (WDICountry_csv)"] == cntry_code)});
+				}
+				update_chart_to_line(cntry_code,select_line_data,select_year,selectedOption)
 				
 		});
-
-        // Add Lines
-		chart.append('line').data(select_year_data)
-             .attr('x1',x(10))
-			 .attr('x2',x(10))
-             .attr('y1',y(0))
-			 .attr('y2',y(20))
-			 .style("stroke", "grey")
-
-		chart.append('line').data(select_year_data)
-             .attr('x1',x(4))
-			 .attr('x2',x(55))
-             .attr('y1',y(10))
-			 .attr('y2',y(10))
-			 .style("stroke", "grey")
-       
-	   var line_data = d3.map(select_year_data, function(d){return d.Region,d["Regional Death Avg_ (SUM)"],d["Regional Birth Avg_ (SUM)"];}).keys()
-	   console.log(line_data)
+       var line_data = d3.map(select_year_data, function(d){return d.Region,d["Regional Death Avg_ (SUM)"],d["Regional Birth Avg_ (SUM)"];}).keys()
 	   // Add Death Rate and Birth Rate Lines over the Years
 	   const xline = d3.scaleTime().range([0, line_width]);
        const yline = d3.scaleLinear().range([line_height, 0]);
@@ -364,43 +386,12 @@ async function init() {
 	   .attr("class", "xaxis")
        .attr("transform", "translate(" + margin + ",650)")
        .call(d3.axisBottom(x).tickFormat(d3.format("~d")))
-	   
-	 // Plot Line Chart in SecondSVG Area
-	 //chart.append("path")
-     // .datum(select_line_data)
-     // .attr("fill", "none")
-     // .attr("stroke", "green" )
-      //.attr("stroke-width", 2)
-     // .attr("d", d3.line()
-     //   .x(function(d) { return z(d.Year) })
-    //    .y(function(d) { return w(d["Avg_ Birth Rate (Per 1000) (SUM)"])})
-     //   )
-
-	 // Plot Axis for Year in Second SVG
-	 secondsvg.append('g')
-	   .attr("class", "yearaxis")
-       .attr("transform", "translate(-40,300)")
-       .call(d3.axisBottom(z).tickFormat(d3.format("~d")))
 	 
-	 secondsvg.append('g')
-	   .attr("class", "yearaxis")
-       .attr("transform", "translate(-30,0)")
-       .call(d3.axisLeft(w).tickFormat(d3.format("~d")))
-	   
-     // Plot Annotations
-     d3.select('svg').append('g')
-	   .attr("class", "annotation-group")
-       .call(makeAnnotations_highdthbrth_rate)
-    
-	 d3.select('svg').append('g')
-	   .attr("class", "annotation-group")
-       .call(makeAnnotations_highdeath_rate)
-	   
 	 //	 Plot X and Y Labels
 	 var xlabel = d3.select("svg").append("text")
        .attr("class", "xlabel")
        .attr("text-anchor", "end")
-       .attr("x", 900)
+       .attr("x", 1000)
        .attr("y", 1.75*margin+svg_dim+5	)
        .style('fill', 'DarkGreen')
        .style('font-weight', 'bold')
@@ -427,11 +418,221 @@ async function init() {
 	   .style('font-size',"60px")
        .text(select_year)
 	   .attr("opacity",0.35)
-	   
+	 
+	// Draw Annotations for Scatter Chart with Default View (2010 - BirthRate)
+	var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
+	enabledisableAnnotation_Scatter(select_year_data,selectedOption,xaxis=x,134,yaxis=y,62,7)
+	//enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,index_pos,yrange,index_max_pos) 
 	 // ####################################################################################################################
-	 // Section to Details inside Second SVG element
-	   
+	 var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
+	 if (selectedOption == "BirthRate") textlabel = "The Scatter Chart on Left shows the Death Rate and Birth Rate Comparison Over the Years"
+	 else if (selectedOption == "LifeExp") textlabel = "The Scatter Chart on Left shows the Death Rate and Life Expectancy Comparison Over the Years"
+	 else if (selectedOption == "HealthSpend") textlabel = "The Scatter Chart on Left shows the Death Rate and Health Spend Per Capita Comparison Over the Years"
+	 secondsvg.append("text")
+	         .text(textlabel)
+	         .attr("class", "SecondSVGHeadingText1")
+             .style('fill', 'DarkGreen')
+             //.style('font-weight', 'bold')
+	         .style('font-size',"20px")
+			 .style('opacity',0.9)
+			 .attr('x',15)
+			 .attr('y',40)
+			 .call(wrap, 320)
+	secondsvg.append("text")
+	         .text("Key Features of Narrative Visualization:")
+	         .attr("class", "SecondSVGText1")
+             .style('fill', '#003366')
+             .style('font-weight', 'bold')
+	         .style('font-size',"16px")
+			 .style('opacity',0.9)
+			 .attr('x',15)
+			 .attr('y',120)
+			 .call(wrap, 320)
+	secondsvg.append("text")
+	         .text("1. Select Radio Buttons from Top to Change the View in the form of Interactive Slide Shows.")
+	         .attr("class", "SecondSVGText2")
+             .style('fill', '#800000')
+	         .style('font-size',"16px")
+			 .style('opacity',0.9)
+			 .attr('x',25)
+			 .attr('y',150)
+			 .call(wrap, 320)
+	secondsvg.append("text")
+	         .text("2. Each Country is Shown as a Circle in the Chart and the size is proportional to the Countries Population.")
+	         .attr("class", "SecondSVGText3")
+             .style('fill', '#800000')
+	         .style('font-size',"16px")
+			 .style('opacity',0.9)
+			 .attr('x',25)
+			 .attr('y',190)
+			 .call(wrap, 320)
+	secondsvg.append("text")
+	         .text("3. Hover your Mouse on Circles to see Country Name and Its Axis Values (Differs for Radio Option chosen).")
+	         .attr("class", "SecondSVGText4")
+             .style('fill', '#800000')
+	         .style('font-size',"16px")
+			 .style('opacity',0.9)
+			 .attr('x',25)
+			 .attr('y',245)
+			 .call(wrap, 320)
+	secondsvg.append("text")
+	         .text("4. Analyze the Results by Changing the Chart Slides by Using =>> or <<= Years Range from 2010 to 2020")
+	         .attr("class", "SecondSVGText5")
+             .style('fill', '#800000')
+	         .style('font-size',"16px")
+			 .style('opacity',0.9)
+			 .attr('x',25)
+			 .attr('y',305)
+			 .call(wrap, 320)
+	secondsvg.append("text")
+	         .text("5. Filter Results by Unselecting the Regions from the Legend.")
+	         .attr("class", "SecondSVGText6")
+             .style('fill', '#800000')
+	         .style('font-size',"16px")
+			 .style('opacity',0.9)
+			 .attr('x',25)
+			 .attr('y',360)
+			 .call(wrap, 320)
+	secondsvg.append("text")
+	         .text("6. Click on Countries to Change the View to Line Chart Depicting Trends over the years and also depicting Countries Population over the Years in Bar Chart.")
+	         .attr("class", "SecondSVGText7")
+             .style('fill', '#800000')
+	         .style('font-size',"16px")
+			 .style('opacity',0.9)
+			 .attr('x',25)
+			 .attr('y',400)
+			 .call(wrap, 320)
+	secondsvg.append("text")
+	         .text("7. Annotations in Each Slide are dynamically updated as per the Selections made.")
+	         .attr("class", "SecondSVGText8")
+             .style('fill', '#800000')
+	         .style('font-size',"16px")
+			 .style('opacity',0.9)
+			 .attr('x',25)
+			 .attr('y',475)
+			 .call(wrap, 320)		 
+
+			
  }
+ 
+ function plot_bar_chart(select_year_pop_data,min_pop_val,max_pop_val,country_name,incomegrp,select_year_lifeexp_healthspend_data,rgn_name)
+	{
+	 z = d3.scaleLinear().domain([2010,2021]).range([20,sec_line_width])
+	 diff_pop = max_pop_val - min_pop_val
+	 w = d3.scaleLinear().domain([min_pop_val - diff_pop,max_pop_val + diff_pop]).range([sec_line_height,0])
+	 //Decide the Bar Chart Color as per Region Name
+	 if (rgn_name == "Latin America & Caribbean" ) bar_color = "#440154ff";
+	 else if (rgn_name == "East Asia & Pacific") bar_color = "#21908dff";
+	 else if (rgn_name == "Sub-Saharan Africa") bar_color = "darkorange";
+	 else if (rgn_name == "South Asia") bar_color = "red";
+	 else if (rgn_name == "Europe & Central Asia") bar_color = "darkgreen";
+	 else if (rgn_name == "North America") bar_color = "pink";
+	 else if (rgn_name == "Middle East & North Africa") bar_color = "brown";
+	// Select Second SVG element
+	 var secondsvg = d3.select('#linesvg')
+       .append('g')
+	   .attr("id", "section2")
+       .attr("transform","translate("+ sec_margin + "," + sec_margin + ")")
+	var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
+	 if (selectedOption == "BirthRate") textlabel = "The Scatter Chart on Left shows the Death Rate and Birth Rate Comparison Over the Years"
+	 else if (selectedOption == "LifeExp") textlabel = "The Scatter Chart on Left shows the Death Rate and Life Expectancy Comparison Over the Years"
+	 else if (selectedOption == "HealthSpend") textlabel = "The Scatter Chart on Left shows the Death Rate and Health Spend Per Capita Comparison Over the Years"
+	 secondsvg.select('.SecondSVGHeadingText1').remove()
+	 secondsvg.append("text")
+	         .text(textlabel)//("The Scatter Chart on Left shows the Death Rate and Birth Rate Comparison Over the Years")
+	         .attr("class", "SecondSVGHeadingText1")
+             .style('fill', 'DarkGreen')
+             .style('font-weight', 'bold')
+	         .style('font-size',"15px")
+			 .style('opacity',0.9)
+			 .attr('x',-35)
+			 .attr('y',-20)
+			 .call(wrap, 320)
+	secondsvg.selectAll("text").remove() // Clear Old Text before replacing it with the new one.
+	var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
+	var div = d3.select("body").append("div")
+                .attr("class", "bartooltip")
+                .style("opacity", 0);
+	//var selectedOption = d3.select('#selectxdropdown').property("value")
+	secondsvg.append("text").text("Bar Chart Depicting Population Trend over the Years for " + country_name)
+	         .attr("class", "HeadingText1")
+             .style('fill', 'DarkGreen')
+             .style('font-weight', 'bold')
+	         .style('font-size',"15px")
+			 .style('opacity',0.9)
+			 .attr('x',55)
+			 .attr('y',15)
+			 .call(wrap, 220)
+	secondsvg.append("text").text(incomegrp + " Group")
+			 .attr("class", "HeadingText1")
+             .style('fill', 'DarkGrey')
+             .style('font-weight', 'bold')
+	         .style('font-size',"25px")
+			 .style('opacity',0.35)
+			 .attr('x',75)
+			 .attr('y',95)
+			 .call(wrap, 220)
+		
+		// Plot Axis for Year in Second SVG
+	secondsvg.append('g')
+				 .attr("class", "yearaxis")
+                 .attr("transform", "translate(0,370)")
+                 .call(d3.axisBottom(z).tickFormat(d3.format("~d")))
+	 
+	secondsvg.append('g')
+	             .attr("class", "yearaxis")
+                 .attr("transform", "translate(20,0)")
+                 .call(d3.axisLeft(w).tickFormat(d3.format("~s")))
+		
+	secondsvg.selectAll('rect')
+            .data(select_year_pop_data)
+            .enter().append('rect').attr("class","rect_bar")
+            .attr('x', function(d) { return Number(z(d["Year"]))})
+			.attr('y' , function(d) {
+								return Number(w(d["Avg_ Total Population (SUM)"]))
+								})
+            .attr('width', barWidth - 5)
+            .attr('height', function(d) { 
+						return (sec_line_height - Number(w(d["Avg_ Total Population (SUM)"])) + 1)})
+		    .attr("opacity",0.35)
+			.attr("fill",bar_color)
+			.attr("stroke","black")
+			  /* .rect_bar {fill: pink; stroke: black; opacity: 0.35} */
+		    .on("mouseover", function(d) {      
+		    				div.transition()     
+		    					.duration(200)      
+		    					.style("opacity", .9);
+		    			div.html(function(){return "<b>" + d["Avg_ Total Population (SUM)"]
+		    									})
+		    			.style("left", (d3.event.pageX) + "px")     
+		    				.style("top", (d3.event.pageY - 28) + "px")
+		    			})
+		    .on("mouseout", function(d) {       
+		    			div.transition()        
+		    			.duration(500)      
+		    			.style("opacity", 0);   
+		    	})	
+
+	secondsvg.selectAll("rect")
+			 .transition()
+			 .duration(800)
+             .attr("y", function(d) { return Number(w(d["Avg_ Total Population (SUM)"])) })
+             .attr("height", function(d) { return sec_line_height - Number(w(d["Avg_ Total Population (SUM)"])) + 1; })
+             .delay(function(d,i){console.log(i) ; return(i*100)})
+			
+	
+	//Remove Radio Buttons
+	d3.select("#radiobutton").remove();
+	// Type the Details at the Bottom section
+	secondsvg.append("text").text("(Hover Mouse on Bars to See Population)")
+					 .attr("class", "HeadingText1")
+                     .style('fill', 'red')
+	                 .style('font-size',"15px")
+					 .style('opacity',0.8)
+					 .attr('x',45)
+					 .attr('y',405)
+					 .call(wrap, 300)
+	}
     function add_year_slider(years){
 	 d3.select("svg")
        .selectAll("g")
@@ -451,34 +652,33 @@ async function init() {
        {
           d3.select(this).append("rect")
             .attr("id", "year"+String(d))
-            .attr('x', -5)
+            .attr('x', -10)
             .attr('y', -15)
-            .attr('opacity', .2)
-            .attr('width', 55)
+            .attr('opacity', .3)
+            .attr('width', 65)
             .attr('height', 20)
-            .attr('stroke', 'black')
+            .attr('stroke', 'grey')
             .attr('fill', function(d,i) {
-                    if(d=="<<=" || d=="=>>") return("yellow")
-                    if(Number(d)===2010) return('blue');
-                          else return ('brown');
+                    if(d=="<<=" || d=="=>>") return("lightyellow")
+                    if(Number(d)===2010) return('#177245');
+                          else return ('#a9a9a9');
                  })
             .on('click', function(d,i)
             {
                d3.selectAll("rect").attr("fill", function(d) {
-                    if(d=="=>>" || d=="<<=") return ("yellow");
-                    else return ("brown")
+                    if(d=="=>>" || d=="<<=") return ("lightyellow");
+                    else return ("#a9a9a9")
                })
 
                d3.select(this).attr("fill", function(d){
                     if(d=="=>>" || d=="<<=") 
-					return ("yellow");
-                    else return ("blue")
+					return ("lightyellow");
+                    else return ("#177245")
                })
                if(d=="=>>")
 			   {
                     let year_index = years.indexOf(select_year)
                     if(year_index < (years.length - 2)) select_year = years[year_index+1]
-					//console.log("select_year:"+select_year)
                }
                else if(d=="<<="){
                     let year_index = years.indexOf(select_year)
@@ -486,8 +686,8 @@ async function init() {
                }
                else select_year = Number(d);
                let id_selected = "#year" + String(select_year)
-			   d3.select(id_selected).attr("fill", "lightblue")
-			   var selectedOption = d3.select('#selectxdropdown').property("value")
+			   d3.select(id_selected).attr("fill", "#177245")
+			   var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
 			   update_axis(selectedOption)
             });
        })
@@ -495,111 +695,502 @@ async function init() {
 	// A function that update the chart
     function update_axis(selectedGroup) {
 	 let chart = d3.select("#chart")
-	  //d3.select('svg').selectAll('#chart').data(clear_circles).exit().remove()
       col = findcol_Name(selectedGroup)
-	  plot_points(col,selectedGroup)
-     
+	  d3.select('svg').selectAll('#circle').data(clear_circles).exit().remove()
+	  plot_circles(col,selectedGroup)
     }
 	
 	function update_chart_to_line(cntry_code,select_line_data,year_sel,dropdownsel){
 		let chart = d3.select("#chart")
 		let max_val = 0
 		let min_val = 1000
+		var min_line1_val = 1000
+		var max_line1_val = 0
+		var min_line2_val = 1000
+		var max_line2_val = 0
 		let btn = ["Reset"]
+		var annotation_deathbirth_arr = []
+		var annotation_healthspend_arr = []
+		var annotation_lifeexp_arr = []
+		var country_birth_rate_avg = 0, region_birth_rate_avg = 0, country_death_rate_avg = 0, region_death_rate_avg=0
 		// Remove existing chart from the graph
 		d3.select('svg').selectAll('#chart').data(clear_circles).exit().remove()
+		var secondsvg = d3.select('#linesvg')
 		d3.select('svg')
-          .append('g')
+		  .append('g')
 	      .attr("id", "line")
           .attr("transform","translate("+ margin + "," + margin + ")")
-		  
+
+		// Remove Scatter Chart Annotations  
 		d3.select(".annotation-group").attr("opacity", 0);
 		d3.select(".annotation-group1").attr("opacity", 0);
-		console.log(select_line_data)
-		console.log("year_sel:"+year_sel)
-		console.log("dropdownsel:"+dropdownsel)
+		d3.select(".selectxdropdown").attr("opacity",0);
+		d3.select(".annotation-group2").attr("opacity",0);
+		d3.select(".annotation-group3").attr("opacity",0);
+		d3.select(".annotation-group4").attr("opacity",0);
+		d3.select(".annotation-group5").attr("opacity",0);
+		d3.select(".annotation-group6").attr("opacity",0);
 		
+		// Remove Mouse Hover Text from the Second svg
+		secondsvg.select(".SecondSVGIncGrp").remove();
+		secondsvg.select(".SecondSVGCntry").remove();
+		secondsvg.select(".SecondSVGPop").remove();
+		secondsvg.select(".SecondSVGLifeExp").remove();
+		secondsvg.select(".SecondSVGHealthSpend").remove();
+		secondsvg.select(".SecondSVGBirthRate").remove();
+		secondsvg.select(".SecondSVGRgn").remove();
+		secondsvg.select(".SecondSVGDeathRate").remove();
+		var totpop = 0
+		var totdeathrt = 0
+		var totbirthrt = 0
+		var totlifeexp = 0
+		var tothealthspnd = 0
+		var country_name = d3.map(select_line_data,function (d) {return (d["Country Name"])}).keys() // Get the Country Name
+		var incomegrp = d3.map(select_line_data,function (d) {return (d["Income Group"])}).keys()
+		var rgn_name = d3.map(select_line_data,function (d) {return (d["Region"])}).keys()
+		for (i=0; i<select_line_data.length;i++)
+		{
+			var pop = Number(select_line_data[i]["Avg_ Total Population (SUM)"])
+			totpop = totpop + pop
+			var deathrt = Number(select_line_data[i]["Avg_ Death Rate (Per 1000) (SUM)"])
+			totdeathrt = totdeathrt + deathrt
+			var birthrt = Number(select_line_data[i]["Avg_ Birth Rate (Per 1000) (SUM)"])
+			totbirthrt = totbirthrt + birthrt
+			var lifeexpval = Number(select_line_data[i]["Avg_ Life Expectancy (SUM)"])
+			totlifeexp = totlifeexp + lifeexpval
+			var healthspendval = Number(select_line_data[i]["Avg_ Health Spend / Capita ($) (SUM)"])
+			tothealthspnd = tothealthspnd + healthspendval
+		}
+		var tot_avg_pop = Number(totpop/11).toFixed(0)
+		var tot_avg_dthrt = Number(totdeathrt/11).toFixed(2)
+		var tot_avg_brthrt = Number(totbirthrt/11).toFixed(2)
+		var tot_avg_lifeexprt = Number(totlifeexp/11).toFixed(2)
+		var tot_avg_hlthspndrt = Number(tothealthspnd/11).toFixed(2)
 		// Change Year Tag with Country name
 		var yeartag = d3.select("svg").append("text").attr("class", "yeartag")
-		var country_name = d3.map(select_line_data,function (d) {return (d["Country Name"])}).keys()
-		d3.select("svg").selectAll('.yeartag').text(country_name[0]) // Get the Country Name
-		// Define the X and Y Axis Again
-		x = d3.scaleTime().domain([2010,2020]).range([0,line_width])
+		d3.select("svg").selectAll('.yeartag').text(country_name[0]) // Populate the Country Name
+		// Add the Texts in Second SVG
+		secondsvg.append("text")
+				 .text("Region: "+rgn_name)
+				 .attr("class", "SecondSVGRgn")
+				 .style('fill', 'black')
+				 .style('font-weight', 'bold')
+				 .style('font-size',"18px")
+			     .style('opacity',0.9)
+			     .attr('x',25)
+				 .attr('y',520)
+		secondsvg.append("text")
+				 .text("Total Avg. Population: "+tot_avg_pop)
+				 .attr("class", "SecondSVGPop")
+				 .style('fill', 'Black')
+				 .style('font-size',"18px")
+			     .style('opacity',0.9)
+			     .attr('x',25)
+				 .attr('y',550)
+		secondsvg.append("text")
+				 .text("Total Avg. Death Rate: "+tot_avg_dthrt)
+				 .attr("class", "SecondSVGDeathRate")
+				 .style('fill', 'Black')
+				 .style('font-size',"18px")
+			     .style('opacity',0.9)
+			     .attr('x',25)
+				 .attr('y',580)
+		secondsvg.append("text")
+				 .text("Total Avg. Birth Rate: "+tot_avg_brthrt)
+				 .attr("class", "SecondSVGBirthRate")
+				 .style('fill', 'Black')
+				 .style('font-size',"18px")
+			     .style('opacity',0.9)
+			     .attr('x',25)
+				 .attr('y',610)
+		secondsvg.append("text")
+				 .text("Total Avg. Life Expectancy: "+tot_avg_lifeexprt)
+				 .attr("class", "SecondSVGLifeExp")
+				 .style('fill', 'Black')
+				 .style('font-size',"18px")
+			     .style('opacity',0.9)
+			     .attr('x',25)
+				 .attr('y',640)
+		secondsvg.append("text")
+				 .text("Total Avg. Health Spend: $"+tot_avg_hlthspndrt)
+				 .attr("class", "SecondSVGHealthSpend")
+				 .style('fill', 'Black')
+				 .style('font-size',"18px")
+			     .style('opacity',0.9)
+			     .attr('x',25)
+				 .attr('y',670)
 		
+		if (dropdownsel == "BirthRate") 
+		{
+			var line1_col = "Avg_ Birth Rate (Per 1000) (SUM)"
+			var line2_col = "Avg_ Death Rate (Per 1000) (SUM)"
+			var line3_col = "Regional Birth Avg_ (SUM)"
+			var line4_col = "Regional Death Avg_ (SUM)"
+			var chart_text = "Line Chart Depicting Death Rate and Birth Rate Comparison over the Years"
+			var line1_text = "Country Birth Rate"
+			var line2_text = "Country Death Rate"
+			var line3_text = "Region Avg. Birth Rate"
+			var line4_text = "Region Avg. Death Rate"
+			var yaxistext = "Avg. Birth and Death Rate (Per 1000 People)"
+			var select_year_birth_death_data = select_line_data.filter(function(d) {return d.Year,d[line1_col],d[line2_col],d[line3_col], d[line4_col]})
+			var varannotext = "Birth Rate"
+			var varannotext2 = "Death Rate"
+		}
+		else if (dropdownsel == "LifeExp")
+		{
+			var line1_col = "Avg_ Life Expectancy (SUM)"
+			var line2_col = "Regional Avg_ Life Expectancy (SUM)"
+			var line3_col = ""
+			var line4_col = ""
+			var chart_text = "Line Chart Depicting Life Expectancy Country vs Regional Comparison over the Years"
+			var line1_text = "Country Life Expectancy"
+			var line2_text = "Region Avg. Life Expectancy"
+			var yaxistext = "Avg. Life Expectancy (Age In Years)"
+			var select_year_birth_death_data = select_line_data.filter(function(d) {return d.Year,d[line1_col],d[line2_col]})
+			var varannotext = "Life Expectancy"
+			var varannotext2 = "Life Expectancy"
+		}
+		else if (dropdownsel == "HealthSpend")
+		{
+			var line1_col = "Avg_ Health Spend / Capita ($) (SUM)"
+			var line2_col = "Regional Avg_ Health Spend / Capita ($) (SUM)"
+			var line3_col = ""
+			var line4_col = ""
+			var chart_text = "Line Chart Depicting Health Spend Per Capita Country vs. Region Comparison over the Years"
+			var line1_text = "Country Health Spend ($)"
+			var line2_text = "Region Avg. Health Spend ($)"
+			var yaxistext = "Avg. Health Spend Per Capita (1000 People)"
+			var select_year_birth_death_data = select_line_data.filter(function(d) {return d.Year,d[line1_col],d[line2_col]})
+			var varannotext = "Health Spend"
+			var varannotext2 = "Health Spend"
+		}
+		// Define the X and Y Axis Again
+		x = d3.scaleTime().domain([2010,2021]).range([0,line_width])
 		// Get Min and Max Values of Birth Rate and Death Rates
 		for(i=0; i < select_line_data.length; i++){	
-			max_birth_val = Number(select_line_data[i]["Avg_ Birth Rate (Per 1000) (SUM)"]);
-			min_birth_val = Number(select_line_data[i]["Avg_ Birth Rate (Per 1000) (SUM)"]);
+		
+			max_line1_col_val = Number(select_line_data[i][line1_col]);
+			min_line1_col_val = Number(select_line_data[i][line1_col]);
 			
-			max_death_val = Number(select_line_data[i]["Avg_ Death Rate (Per 1000) (SUM)"]);
-			min_death_val = Number(select_line_data[i]["Avg_ Death Rate (Per 1000) (SUM)"]);
-
-            if(min_birth_val < min_val && min_birth_val!= 0) min_val_b = min_birth_val;
-            if(max_birth_val > max_val && max_birth_val!= 0) max_val_b = max_birth_val;
+			max_line2_col_val = Number(select_line_data[i][line2_col]);
+			min_line2_col_val = Number(select_line_data[i][line2_col]);
 			
-			if(min_death_val < min_val && min_death_val!= 0) min_val_d = min_death_val;
-            if(max_death_val > max_val && max_death_val!= 0) max_val_d = max_death_val;
+			max_line3_col_val = Number(select_line_data[i][line3_col]);
+			min_line3_col_val = Number(select_line_data[i][line3_col]);
+			
+			max_line4_col_val = Number(select_line_data[i][line4_col]);
+			min_line4_col_val = Number(select_line_data[i][line4_col]);
+			
+			min_pop_val = Number(select_line_data[i]["Avg_ Total Population (SUM)"]);
+			max_pop_val = Number(select_line_data[i]["Avg_ Total Population (SUM)"]);
+			
+            if(min_line1_col_val < min_line1_val && min_line1_col_val!= 0) min_line1_val = min_line1_col_val;
+            if(max_line1_col_val > max_line1_val && max_line1_col_val!= 0) max_line1_val = max_line1_col_val;
+			
+			if(min_line3_col_val < min_line1_val && max_line3_col_val!= 0) min_line1_val = min_line3_col_val;
+			if(max_line3_col_val > max_line1_val && max_line3_col_val!= 0) max_line1_val = max_line3_col_val;
+			
+			if(min_line2_col_val < min_line2_val && min_line2_col_val!= 0) min_line2_val = min_line2_col_val;
+            if(max_line2_col_val > max_line2_val && max_line2_col_val!= 0) max_line2_val = max_line2_col_val;
+			
+			if(min_line4_col_val < min_line2_val && min_line2_col_val!= 0) min_line2_val = min_line2_col_val;
+            if(max_line4_col_val > max_line2_val && max_line2_col_val!= 0) max_line2_val = max_line2_col_val;
+			
+			country_birth_rate_avg = country_birth_rate_avg + min_line1_col_val
+			country_death_rate_avg = country_death_rate_avg + min_line2_col_val
+			region_birth_rate_avg = region_birth_rate_avg + min_line3_col_val
+			region_death_rate_avg = region_death_rate_avg + min_line4_col_val
+			
+			if (i == 0) {
+					min_val_p = min_pop_val
+					max_val_p = max_pop_val
+				}
+			if(min_pop_val < min_val_p && min_pop_val!= 0 && i != 0) min_val_p = min_pop_val;
+            if(max_pop_val > max_val_p && max_pop_val!= 0 && i != 0) max_val_p = max_pop_val;
 		}
+		country_birth_rate_avg = (country_birth_rate_avg / 11).toFixed(2)
+		country_death_rate_avg = (country_death_rate_avg / 11).toFixed(2)
+		region_birth_rate_avg = (region_birth_rate_avg / 11).toFixed(2)
+		region_death_rate_avg = (region_death_rate_avg / 11).toFixed(2)
 		
+		cntry_rgn_birthrate_diff = Math.abs(region_birth_rate_avg - country_birth_rate_avg)
+		cntry_rgn_deathrate_diff = Math.abs(region_death_rate_avg - country_death_rate_avg)
+		
+		// Check the Difference for Birth Rate with Regional Avg. Birth Rate
+		if (Number(cntry_rgn_birthrate_diff) <= Number(birthrate_var_threshold)) {
+				annotation_deathbirth_arr[0] = "Country's "+varannotext+" Avg.("+country_birth_rate_avg+") is quite close (<=2) to Regional Avg. "+varannotext+" ("+region_birth_rate_avg+")"
+		}
+		else if (Number(cntry_rgn_birthrate_diff) > Number(birthrate_var_threshold))
+		{	
+			if (Number(country_birth_rate_avg) > Number(region_birth_rate_avg)) annotation_deathbirth_arr[0] = "Country's "+varannotext+" Avg. ("+country_birth_rate_avg+") is More than the Regional Avg. "+varannotext+" ("+region_birth_rate_avg+")"
+			else annotation_deathbirth_arr[0] = "Country's "+varannotext+" Avg.("+country_birth_rate_avg+") is Less than the Region's Avg. "+varannotext+"("+region_birth_rate_avg+")"
+		}
+		// Check the Difference for Death Rate with Regional Avg. Death Rate
+		if (Number(cntry_rgn_deathrate_diff) <= Number(deathrate_var_threshold)) annotation_deathbirth_arr[1] = "Country's Death Rate Avg.("+country_death_rate_avg+") is quite close (<=2) to Regional Avg. Death Rate ("+region_death_rate_avg+")"
+		else if (Number(cntry_rgn_deathrate_diff) > Number(deathrate_var_threshold))
+		{	
+			if (Number(country_death_rate_avg) > Number(region_death_rate_avg)) annotation_deathbirth_arr[1] = "Country's Death Rate Avg. ("+country_death_rate_avg+") is More than the Regional Avg. Death Rate ("+region_death_rate_avg+")"
+			else annotation_deathbirth_arr[1] = "Country's Death Rate Avg.("+country_death_rate_avg+") is Less than the Region's Avg. Death Rate("+region_death_rate_avg+")"
+		}
+		// Compare Birth and Death Rates
+		if (Number(country_birth_rate_avg) > Number(country_death_rate_avg))
+		{
+			if ( Math.abs(Number(country_birth_rate_avg) - Number(country_death_rate_avg)) <= 1) {
+				if (dropdownsel == "BirthRate") {
+					annotation_deathbirth_arr[2] = "Country's "+varannotext+" Avg. ("+country_birth_rate_avg+") is slightly more than the Country's Avg. "+varannotext2+" ("+country_death_rate_avg+"). Population Trend will still see a decline in the Bar Chart shown on Right."
+				} else { annotation_deathbirth_arr[2] = "Country's "+varannotext+" Avg. ("+country_birth_rate_avg+") is slightly more than the Region's Avg. "+varannotext2+" ("+country_death_rate_avg+")." }
+			}
+			else 
+			{
+				if (dropdownsel == "BirthRate") {
+					annotation_deathbirth_arr[2] = "Country's "+varannotext+" Avg. ("+country_birth_rate_avg+") is More than the Country's Avg. "+varannotext2+" ("+country_death_rate_avg+"). An increase in the Population is seen in the Bar Chart on Right."
+				} else { annotation_deathbirth_arr[2] = "Country's "+varannotext+" Avg. ("+country_birth_rate_avg+") is slightly more than the Region's Avg. "+varannotext2+" ("+country_death_rate_avg+")." }
+			}
+		}
+		else 
+		{
+			if (dropdownsel == "BirthRate") {
+				annotation_deathbirth_arr[2] = "Country's "+varannotext+" Avg. ("+country_birth_rate_avg+") is Less than the Country's Avg. "+varannotext2+" ("+country_death_rate_avg+"). A Decrease in the Population is seen in the Bar Chart on Right."
+			} else { annotation_deathbirth_arr[2] = "Country's "+varannotext+" Avg. ("+country_birth_rate_avg+") is Less than the Region's Avg. "+varannotext2+" ("+country_death_rate_avg+")." }
+		}
 		// Get the Min and Max Range 
-		if (min_val_d < min_val_b) {min_line_val = min_val_d} else {min_line_val = min_val_b}
-		if (max_val_d < max_val_b) {max_line_val = max_val_b} else {max_line_val = max_val_d}
-		console.log("min_val:"+min_line_val)
-		console.log("max_val:"+max_line_val)
-		y = d3.scaleLinear().domain([min_line_val-10,max_line_val+10]).range([height,0]) //0,20
+		if (min_line2_val < min_line1_val) {min_line_val = min_line2_val} else {min_line_val = min_line1_val}
+		if (max_line2_val < max_line1_val) {max_line_val = max_line1_val} else {max_line_val = max_line2_val}
 		
-		let select_year_birth_death_data = select_line_data.filter(function(d) {return d.Year,d["Avg_ Birth Rate (Per 1000) (SUM)"],d["Avg_ Birth Rate (Per 1000) (SUM)"]})
+		y = d3.scaleLinear().domain([min_line_val-10,max_line_val+10]).range([line_height,0]) 
+		
+		let len_birth_death = select_year_birth_death_data.length
+		let select_year_pop_data = select_line_data.filter(function(d) {return d.Year,d["Avg_ Total Population (SUM)"]})
+		let select_year_lifeexp_healthspend_data = select_line_data.filter(function(d) {return d.Year,d["Avg_ Life Expectancy (SUM)"],d["Avg_ Health Spend / Capita ($) (SUM)"]})
+		xyear = d3.scaleBand().domain([2010,2020]).padding(0.4).range([0,sec_line_width])
+		yyear = d3.scaleLinear().domain([0,d3.max(select_year_pop_data, function(d) {return d["Avg_ Total Population (SUM)"];})]).rangeRound([0,sec_line_height - margin]);
+		
 		select_year_birth_death_data.sort(function(x, y){return d3.ascending(x.Year, y.Year);})
-		//console.log("select_year_birth_death_data:"+select_year_birth_death_data)
+		select_year_pop_data.sort(function(x, y){return d3.ascending(x.Year, y.Year);})
+		select_year_lifeexp_healthspend_data.sort(function(x, y){return d3.ascending(x.Year, y.Year);})
 		
 		d3.select('svg').selectAll('g.xaxis').transition().duration(1000).call(d3.axisBottom(x).tickFormat(d3.format("~d")));
 		d3.select('svg').selectAll('g.yaxis').transition().duration(1000).call(d3.axisLeft(y).tickFormat(d3.format("~d")));
 		
 		let line = d3.select("#line")
 		
-		var line_new = d3.line()
+		if (dropdownsel == "BirthRate") 
+		{
+			var line_new = d3.line()
 					 .x(function(d) { return x(d.Year)})   
-					 .y(function(d) { return y(d["Avg_ Birth Rate (Per 1000) (SUM)"])})
+					 .y(function(d) { return y(d[line1_col])})
 
-		var line_new_1 = d3.line()
+			var line_new_1 = d3.line()
 					 .x(function(d) { return x(d.Year)})   
-					 .y(function(d) { return y(d["Avg_ Death Rate (Per 1000) (SUM)"])})					 
+					 .y(function(d) { return y(d[line2_col])})					 
 	    
-		line.append("path").datum(select_year_birth_death_data).attr("fill", "none").attr("stroke", "green").attr("stroke-linejoin", "round").attr("stroke-linecap", "round").attr("stroke-width", 1.5).attr("d", line_new);
-		line.append("path").datum(select_year_birth_death_data).attr("fill", "none").attr("stroke", "red").attr("stroke-linejoin", "round").attr("stroke-linecap", "round").attr("stroke-width", 1.5).attr("d", line_new_1);
-		
+			var line_new_2 = d3.line()
+					 .x(function(d) { return x(d.Year)})   
+					 .y(function(d) { return y(d[line3_col])})
+
+			var line_new_3 = d3.line()
+					 .x(function(d) { return x(d.Year)})   
+					 .y(function(d) { return y(d[line4_col])})
+		}
+		else if (dropdownsel == "LifeExp" || dropdownsel == "HealthSpend")
+		{
+			var line_new = d3.line()
+					 .x(function(d) { return x(d.Year)})   
+					 .y(function(d) { return y(d[line1_col])})
+
+			var line_new_1 = d3.line()
+					 .x(function(d) { return x(d.Year)})   
+					 .y(function(d) { return y(d[line2_col])})		
+		}
+		var div = d3.select("body").append("div")
+                .attr("class", "linetooltip")
+                .style("opacity", 0);
+		// #####################  Birth Rate Line #######################
+		line.append("path")
+		    .attr("class","line1")
+			.datum(select_year_birth_death_data)
+			.attr("fill", "none")
+			.attr("stroke", "darkgreen")
+			.attr("stroke-linejoin", "round")
+			.attr("stroke-linecap", "round")
+			.attr("stroke-width", 1.5)
+			.attr("d", line_new)
+			.transition()
+			.delay(100)
+			.duration(2000)
+		//Add Circle Points in Line for each year
+		line.selectAll(".line1").data(select_year_birth_death_data) 
+            .enter()
+            .append("circle")
+            .attr("class", "data-circle")
+            .attr("r", 5)
+            .attr("cx", function(d) {return x(d.Year);})
+            .attr("cy", function(d) {return y(d[line1_col])})
+			.transition()
+			.delay(100)
+			.duration(2000)
+		line.selectAll(".line1").data(select_year_birth_death_data) 
+            .enter()
+            .append("text")
+            .attr("x", function(d) {return x(d.Year) - 10;})
+            .attr("y", function(d) {return y(d[line1_col]) - 10})
+			.text(function(d) {return d[line1_col]})
+			.attr("stroke","darkgreen")
+			.attr("opacity",0.9)
+			.style("font", "15px sans-serif")
+			.transition()
+			.delay(100)
+			.duration(2000)
 		line.append("text")
-            .attr("x", 1300)
-            .attr("y", 20)
+            .attr("x", x('2020')+10)
+            .attr("y", y(max_line1_col_val))
             .style("font", "12px sans-serif")
-            .text(function(d) { return "Death Rate" });
-		
-		line.append('line')
-             .attr('x1',1285)
-			 .attr('x2',1297)
-             .attr('y1',16)
-			 .attr('y2',16)
-			 .style("stroke", "red")
-	     
+            .text(function(d) { return line1_text })
+			.style('fill', 'darkgreen');
+		// #####################  Death Rate Line #######################
+		line.append("path")
+		    .attr("class","line2")
+		    .datum(select_year_birth_death_data)
+			.attr("fill", "none")
+			.attr("stroke", "darkred")
+			.attr("stroke-linejoin", "round")
+			.attr("stroke-linecap", "round")
+			.attr("stroke-width", 1.5)
+			.attr("d", line_new_1)
+		line.selectAll(".line2").data(select_year_birth_death_data) 
+            .enter()
+            .append("circle")
+            .attr("class", "data-circle")
+            .attr("r", 5)
+            .attr("cx", function(d) {return x(d.Year);})
+            .attr("cy", function(d) {return y(d[line2_col])})
+		line.selectAll(".line2").data(select_year_birth_death_data) 
+            .enter()
+            .append("text")
+            .attr("x", function(d) {return x(d.Year) - 10;})
+            .attr("y", function(d) {return y(d[line2_col]) - 10})
+			.text(function(d) {return d[line2_col]})
+			.attr("stroke","darkred")
+			.attr("opacity",0.9)
+			.style("font", "15px sans-serif")
 		line.append("text")
-            .attr("x", 1300)
-            .attr("y", 35)
+            .attr("x", x('2020')+10)
+            .attr("y", y(max_line2_col_val))
             .style("font", "12px sans-serif")
-            .text(function(d) { return "Birth Rate" });
-		
-		line.append('line')
-             .attr('x1',1285)
-			 .attr('x2',1297)
-             .attr('y1',31)
-			 .attr('y2',31)
-			 .style("stroke", "green")
+            .text(function(d) { return line2_text })
+			.style('fill', 'darkred');
+		if (dropdownsel == "BirthRate") {
+		// #####################  Regional Avg. Birth Rate Line #######################	
+		line.append("path")
+		    .attr("class","line3")
+		    .datum(select_year_birth_death_data)
+			.attr("fill", "none")
+			.attr("stroke", "darkgreen")
+			.attr("stroke-linejoin", "round")
+			.attr("stroke-linecap", "round")
+			.attr("stroke-width", 1.5)
+			.attr("d", line_new_2)
+			.attr('opacity',0.5)
+		line.selectAll(".line3").data(select_year_birth_death_data) 
+            .enter()
+            .append("circle")
+            .attr("class", "data-circle")
+            .attr("r", 5)
+            .attr("cx", function(d) {return x(d.Year);})
+            .attr("cy", function(d) {return y(d[line3_col])})
+			.attr('opacity',0.5)
+		.on("mouseover", function(d) {      
+						div.transition()     
+							.duration(200)      
+							.style("opacity", .9);
+					div.html(function(){return "<b>" + d[line3_col]
+											})
+					.style("left", (d3.event.pageX) + "px")     
+						.style("top", (d3.event.pageY - 28) + "px")
+					})
+		.on("mouseout", function(d) {       
+					div.transition()        
+					.duration(500)      
+					.style("opacity", 0);   
+			})
+		line.append("text")
+            .attr("x", x('2020')+10)
+            .attr("y", y(max_line3_col_val))
+            .style("font", "12px sans-serif")
+			.style('fill', 'darkgreen')
+			.attr('opacity',0.5)
+            .text(function(d) { return line3_text });
+		// #####################  Regional Avg. Death Rate Line #######################	
+		line.append("path")
+		    .attr("class","line4")
+		    .datum(select_year_birth_death_data)
+			.attr("fill", "none")
+			.attr("stroke", "darkred")
+			.attr("stroke-linejoin", "round")
+			.attr("stroke-linecap", "round")
+			.attr("stroke-width", 1.5)
+			.attr("d", line_new_3)
+			.attr('opacity',0.5)
+		line.selectAll(".line4").data(select_year_birth_death_data) 
+            .enter()
+            .append("circle")
+            .attr("class", "data-circle")
+            .attr("r", 5)
+            .attr("cx", function(d) {return x(d.Year);})
+            .attr("cy", function(d) {return y(d[line4_col])})
+			.attr('opacity',0.5)
+		.on("mouseover", function(d) {      
+						div.transition()     
+							.duration(200)      
+							.style("opacity", .9);
+					div.html(function(){return "<b>" + d[line4_col]
+											})
+					.style("left", (d3.event.pageX) + "px")     
+						.style("top", (d3.event.pageY - 28) + "px")
+			})
+		.on("mouseout", function(d) {       
+					div.transition()        
+					.duration(500)      
+					.style("opacity", 0);   
+			})
+		line.append("text")
+            .attr("x", x('2020')+10)
+            .attr("y", y(max_line4_col_val))
+            .style("font", "12px sans-serif")
+            .text(function(d) { return line4_text })
+			.style('fill', 'darkred')
+			.attr('opacity',0.5)
+		}
+		line.append("text").text(chart_text)
+	        .attr("class", "HeadingText1")
+            .style('fill', 'brown')
+            .style('font-weight', 'bold')
+	        .style('font-size',"25px")
+			.style('opacity',0.35)
+			.attr('x',50)
+			.attr('y',10)
+			.call(wrap, 650)
+		// Clear text
+		secondsvg.select('.SecondSVGHeadingText1').remove()
+		secondsvg.select('.SecondSVGText1').remove()
+		secondsvg.select('.SecondSVGText2').remove()
+		secondsvg.select('.SecondSVGText3').remove()
+		secondsvg.select('.SecondSVGText4').remove()
+		secondsvg.select('.SecondSVGText5').remove()
+		secondsvg.select('.SecondSVGText6').remove()
+		secondsvg.select('.SecondSVGText7').remove()
+		secondsvg.select('.SecondSVGText8').remove()
+		// Call annotations
+		enabledisableAnnotation_Line(annotation_deathbirth_arr,x('2020')+10,y(max_line1_col_val),y(max_line2_col_val),dropdownsel)
+		// Add Bar Chart
+		plot_bar_chart(select_year_pop_data,min_val_p,max_val_p,country_name,incomegrp,select_year_lifeexp_healthspend_data,rgn_name)
 		// Change the X and Y Axis Labels
 		d3.select("svg").selectAll(".xlabel").remove()
 		d3.select("svg").selectAll(".ylabel").remove()
 		
 		d3.select("svg").append("text").attr("class", "xlabel").attr("text-anchor", "end")
                         .attr("x", 900)
-                        .attr("y", 1.75*margin+svg_dim+5	)
+                        .attr("y", 1.75*margin+svg_dim+5)
                         .style('fill', 'DarkGreen')
                         .style('font-weight', 'bold')
                         .text("Years")
@@ -611,20 +1202,31 @@ async function init() {
                         .style('fill', 'DarkGreen')
                         .style('font-weight', 'bold')
                         .attr("transform", "rotate(-90)")
-                        .text("Avg. Birth and Death Rate (Per 1000 People)")
+                        .text(yaxistext)
 		
+		// Remove the Year Slider now
 		d3.select('svg').selectAll('.yearslider').remove()
+		
+		// Add a Reset Button which will reload the Chart.
 		line.append("text")
 		    .attr("class","Reset")
 		    .attr("x",1350)
 			.attr("y",-20)
-			.style("font", "15px sans-serif")
+			.style("font", "18px sans-serif")
 			.style('font-weight', 'bold')
             .text("Reset")
 			.style('fill', 'DarkOrange')
+			.on("click",function() {
+					d3.select('#main').selectAll('#line').data(clear_circles).exit().remove()
+					d3.select('#main').data(clear_circles).exit().remove()
+					d3.select('#linesvg').data(clear_circles).exit().remove()
+					//init();
+					location.reload() // reload the webpage
+					});
 	     
+		 
 	}
-	
+	// Reference URL: https://newbedev.com/wrapping-text-in-d3
 	function wrap(text, width) {
     text.each(function () {
         var text = d3.select(this),
@@ -672,52 +1274,43 @@ async function init() {
 	}
 	
 	// #########################################################################################################
-	function RegionSelected(object){
+function RegionSelected(object){
         let checked = object.checked
         let clicked_region = object.id
-        //console.log("Checked Value:"+checked);
-		//console.log("Clicked Value:"+clicked_region);
         if (!checked){
-            selected_region.splice(selected_region.indexOf(clicked_region),1);
+            selected_region.splice(selected_region.indexOf(clicked_region),1);// Remove the region from the array
             if(clicked_region=="Latin America & Caribbean") {
 			          d3.select(".Latin America \\& Caribbean").attr("opacity", 0);
-					  d3.select(".makeAnnotations_highdthbrth_rate").attr("opacity", 0);
+					 // d3.select(".makeAnnotations_highdthbrth_rate").attr("opacity", 0);
 					 }
             if(clicked_region=="East Asia & Pacific") {
 					  d3.select(".East Asia \\& Pacific").attr("opacity", 0);
-					  //d3.select(".annotation_diesel").attr("opacity", 0.25);
 					 }
             if(clicked_region=="Sub-Saharan Africa") {
 			          d3.select(".Sub-Saharan Africa").attr("opacity", 0);
-					  d3.select(".annotation_high_deathbirth_rate").attr("opacity", 0);
+					 // d3.select(".annotation_high_deathbirth_rate").attr("opacity", 0);
 					  }
             if(clicked_region=="South Asia") {
 					  d3.select(".South Asia").attr("opacity", 0);
-					  //d3.select(".annotation_diesel").attr("opacity", 0.25);
 					 }
 		    if(clicked_region=="Europe & Central Asia") {
 					  d3.select(".Europe \\& Central Asia").attr("opacity", 0);
-					  //d3.select(".annotation_diesel").attr("opacity", 0.25);
 					 }
 			if(clicked_region=="North America") {
 					  d3.select(".North America").attr("opacity", 0);
-					  //d3.select(".annotation_diesel").attr("opacity", 0.25);
 					 }
 		    if(clicked_region=="Middle East & North Africa") {
 					  d3.select(".Middle East \\& North Africa").attr("opacity", 0);
-					  //d3.select(".annotation_diesel").attr("opacity", 0.25);
 					 }
         }
         else{
-            selected_region.push(clicked_region);
+            selected_region.push(clicked_region); // add the Region into the array
             if(clicked_region=="Latin America & Caribbean") {
 			          d3.select(".Latin America \\& Caribbean").attr("opacity", 1);
-					  d3.select(".annotation_gasoline").attr("opacity", 1);
 					 }
             if(clicked_region=="East Asia & Pacific") d3.select(".East Asia \\& Pacific").attr("opacity", 1);
             if(clicked_region=="Sub-Saharan Africa") {
 			          d3.select(".Sub-Saharan Africa").attr("opacity", 1);
-					  console.log("selectedOption:"+selectedOption)
 					  if (selectedOption == "BirthRate") {d3.select(".annotation_high_deathbirth_rate").attr("opacity", 1)}
 					  else if (selectedOption == "LifeExp" || selectedOption == "HealthSpend"){d3.select(".annotation_high_deathbirth_rate").attr("opacity", 0)}
 					}
@@ -726,118 +1319,560 @@ async function init() {
 			if(clicked_region=="North America") d3.select(".North America").attr("opacity", 1);
 			if(clicked_region=="Middle East \\& North Africa") d3.select(".Middle East & North Africa").attr("opacity", 1);
         }
-		var selectedOption = d3.select('#selectxdropdown').property("value")
-		//console.log("selectedOption:"+selectedOption)
+		var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
         update_axis(selectedOption)
-		enabledisableAnnotation(selectedOption)
+		//enabledisableAnnotation_Line(selectedOption)
     }
-	
-	function enabledisableAnnotation()
+function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,index_pos,yrange,index_max_pos,regionslen)
+{
+	 let chart = d3.select("#chart")
+	 const type = d3.annotationXYThreshold
+	 const type_sec = d3.annotationCallout
+	 const type_rec = d3.annotationCalloutRect
+	 var minxval = 0, minyval=0
+	 maxyval = select_year_data[index_max_pos]["Avg_ Death Rate (Per 1000) (SUM)"]
+	 country_name_max = select_year_data[index_max_pos]["Country Name"]
+	 const tr = d3.transition()
+                .duration(2000).delay(100)
+                .ease(d3.easeLinear);
+	 if (selectedGrp == "BirthRate")
+		{
+			// Find the lowest Death and Birth Rate Value
+			minxval = select_year_data[index_pos]["Avg_ Birth Rate (Per 1000) (SUM)"]
+			minyval = select_year_data[index_pos]["Avg_ Death Rate (Per 1000) (SUM)"]
+			maxxval = select_year_data[index_max_pos]["Avg_ Birth Rate (Per 1000) (SUM)"]
+			maxyval = select_year_data[index_max_pos]["Avg_ Death Rate (Per 1000) (SUM)"]
+			maxyval = (maxyval/1).toFixed(2)
+			country_name = select_year_data[index_pos]["Country Name"]
+			vartext = "Birth Rate"
+			varsign = "("
+			vardx=430
+			vard_dx=80
+			vardy=-150
+			vard_dy=10
+			delta=40
+			const high_deathbirth_rate_annotations = [{
+				   note: {
+						 label: "Sub-Saharan Africa Countries have High Birth (>35) and Death Rates (>10) over the Years",
+						 bgPadding: 5,
+						 title: "High Death and Birth Rate"
+				   },
+				   dx:300,//
+				   dy:260, // dx and dy To increase Annotation line
+				   x:950, //1410
+				   y:150,
+				   subject: {
+							width: 400,
+							height: 200
+							//y1: 190,
+							//y2: 350,
+					},
+					className:"annotation_high_deathbirth_rate"
+			 }].map(function(d){ d.color = "darkorange";return d})
+			 const high_deathrate = [{
+				   note: {
+						 label: "Countries Observed a Decrease in Population due to Higher Death Rate than Birth Rate",
+						 bgPadding: 1,
+						 title: "Decrease in the Population"
+				   },
+				   //can use x, y directly instead of data
+				   dx:250,// To increase Annotation line in X Direction
+				   dy:15, // To increase Annotation line in Y Direction
+				   x:xrange(10)-40,//320, // X Location of Annotation
+				   y:yrange(10)-200,//185, // Y Location of Annotation
+				   subject: {
+							width: 170,
+							height: 260
+							//y1: 140,
+							//y2: 340,
+					},
+					className:"annotation_high_deathrate"
+			 }].map(function(d){ d.color = "darkblue";return d})
+			 const makeAnnotations_highdthbrth_rate = d3.annotation().editMode(true)
+									 .notePadding(15)
+									 .type(type_rec)
+									 .annotations(high_deathbirth_rate_annotations)
+
+			 const makeAnnotations_highdeath_rate = d3.annotation().editMode(true)
+									 .notePadding(5)
+									 .type(type_rec)
+									 .annotations(high_deathrate)
+									 
+			 y = d3.scaleLinear().domain([0,20]).range([height,0]) //0,20
+			// Plot Annotations
+			if (regionslen == 7 ) {
+				 d3.select('svg').append('g')
+				   .attr("class", "annotation-group")
+				   .call(makeAnnotations_highdthbrth_rate)
+				   .on("click", function(d) { d3.select('.annotation-group').transition()        
+												 .duration(500)      
+												 .style("opacity", 0);
+												 d3.select('.annotation-group').remove()}); // Click on Annotation to hide it. 
+				
+				 d3.select('svg').append('g')
+				   .attr("class", "annotation-group1")
+				   .call(makeAnnotations_highdeath_rate)
+				   .on("click", function(d) { d3.select('.annotation-group1').transition()        
+												 .duration(500)      
+												 .style("opacity", 0);
+												 d3.select('.annotation-group1').remove()}); // Click on Annotation to hide it. 
+			}   
+	// Add Lines 
+			chart.append('line')
+				 .attr('class','birthline1')
+				 .attr('x1',xrange(10))
+				 .attr('x2',xrange(10))
+				 .attr('y1',y(0))
+				 .attr('y2',y(20))
+				 .style("stroke", "grey")
+			
+			chart.append('line')
+				 .attr('class','birthline2')
+				 .attr('x1',xrange(4))
+				 .attr('x2',xrange(55))
+				 .attr('y1',y(10))
+				 .attr('y2',y(10))
+				 .style("stroke", "grey")
+		}
+	else if (selectedGrp == "HealthSpend")
+		{
+			// Find the lowest Health Spend Country
+			minxval = select_year_data[index_pos]["Avg_ Health Spend / Capita ($) (SUM)"]
+			minxval = (minxval/1).toFixed(2)
+			minyval = select_year_data[index_pos]["Avg_ Death Rate (Per 1000) (SUM)"]
+			maxxval = select_year_data[index_max_pos]["Avg_ Health Spend / Capita ($) (SUM)"]
+			maxyval = select_year_data[index_max_pos]["Avg_ Death Rate (Per 1000) (SUM)"]
+			maxyval = (maxyval/1).toFixed(2)
+			country_name = select_year_data[index_pos]["Country Name"]
+			vartext = "Health Spend"
+			varsign = "($"
+			vardx=330
+			vard_dx=80
+			vardy=-100
+			vard_dy=18
+			delta=40
+			const high_healthspend = [{
+				   note: {
+						 label: "Countries that are spending the most in Healthcare have lower deaths than countries with less spend on Healthcare",
+						 bgPadding: 1,
+						 title: "High HealthSpend Per Capita"
+				   },
+				   //can use x, y directly instead of data
+				   dx:35,// To increase Annotation line in X Direction
+				   dy:0, // To increase Annotation line in Y Direction
+				   x:1250,//320, // X Location of Annotation
+				   y:500,//185, // Y Location of Annotation
+					className:"annotation_high_healthspend"
+			 }].map(function(d){ d.color = "darkblue";return d})
+			const makeAnnotations_highhealthspend_rate = d3.annotation().editMode(true)
+									 .notePadding(15)
+									 .type(type_sec)
+									 .annotations(high_healthspend)
+			if (regionslen == 7)
+			{
+			d3.select('svg').append('g')
+			   .attr("class", "annotation-group6")
+			   .call(makeAnnotations_highhealthspend_rate)
+			   .on("click", function(d) { d3.select('.annotation-group6').transition()        
+										     .duration(500)      
+											 .style("opacity", 0);
+											 d3.select('.annotation-group6').remove()}); // Click on Annotation to hide it. 
+			}
+		}
+	else if (selectedGrp == "LifeExp")
+		{
+			// Find the lowest Health Spend Country
+			minxval = select_year_data[index_pos]["Avg_ Life Expectancy (SUM)"]
+			minxval = (minxval/1).toFixed(2)
+			minyval = select_year_data[index_pos]["Avg_ Death Rate (Per 1000) (SUM)"]
+			maxxval = select_year_data[index_max_pos]["Avg_ Life Expectancy (SUM)"]
+			maxyval = select_year_data[index_max_pos]["Avg_ Death Rate (Per 1000) (SUM)"]
+			maxyval = (maxyval/1).toFixed(2)
+			country_name = select_year_data[index_pos]["Country Name"]
+			vartext = "Life Expectancy"
+			varsign = "("
+			vardx=140
+			vard_dx=80
+			vardy=180
+			vard_dy=18
+			delta=40
+				// Add Lines 
+			chart.append('line')
+				 .attr('class','lifeexpline1')
+				 .attr('x1',xrange(55))
+				 .attr('x2',xrange(55))
+				 .attr('y1',y(0))
+				 .attr('y2',y(20))
+				 .style("stroke", "grey")
+			
+			chart.append('line')
+				 .attr('class','lifeexpline2')
+				 .attr('x1',xrange(42))
+				 .attr('x2',xrange(55))
+				 .attr('y1',y(10))
+				 .attr('y2',y(10))
+				 .style("stroke", "grey")
+			const high_deathlifeexp_rate_annotations = [{
+			   note: {
+				 label: "Countries inside this section have Higher Death rate (>10) and also lower Life Expectancy (<55)",
+				 bgPadding: 5,
+				 title: "Higher Deaths and Lower Life Expectancy"
+			   },
+				   dx:0,// To increase Annotation line in X Direction
+				   dy:0, // To increase Annotation line in Y Direction
+				   x:100,
+				   y:210,
+				className:"annotation_high_deathlifeexp_rate",
+				connector: { end: "arrow" }
+			 }].map(function(d){ d.color = "darkblue";return d})
+			 
+			const makeAnnotations_highdthlifeexp_rate = d3.annotation().editMode(true)
+									 .notePadding(15)
+									 .type(type_sec)
+									 .annotations(high_deathlifeexp_rate_annotations)
+			const low_death_highlifeexp_rate_annotations = [{
+			   note: {
+				 label: "Countries with Higher Life Expectancy have seen a Lower Death Rate",
+				 bgPadding: 5,
+				 title: "Lower Deaths and Higher Life Expectancy"
+			   },
+				   dx:0,// To increase Annotation line in X Direction
+				   dy:0, // To increase Annotation line in Y Direction
+				   x:1350,
+				   y:410,
+				className:"annotation_low_death_highlifeexp_rate",
+				connector: { end: "arrow" }
+			 }].map(function(d){ d.color = "darkblue";return d})
+			const makeAnnotations_lowdthhighlifeexp_rate = d3.annotation().editMode(true)
+									 .notePadding(15)
+									 .type(type_sec)
+									 .annotations(low_death_highlifeexp_rate_annotations)
+			 
+			if (regionslen == 7)
+			{
+			d3.select('svg').append('g')
+			   .attr("class", "annotation-group4")
+			   .call(makeAnnotations_highdthlifeexp_rate)
+			   .on("click", function(d) { d3.select('.annotation-group4').transition()        
+										     .duration(500)      
+											 .style("opacity", 0);
+											 d3.select('.annotation-group4').remove()}); // Click on Annotation to hide it. 
+											 
+			d3.select('svg').append('g')
+			   .attr("class", "annotation-group5")
+			   .call(makeAnnotations_lowdthhighlifeexp_rate)
+			   .on("click", function(d) { d3.select('.annotation-group5').transition()        
+										     .duration(500)      
+											 .style("opacity", 0);
+											 d3.select('.annotation-group5').remove()}); // Click on Annotation to hide it. 
+			}
+		}
+	lowest_val_annotation = [
+							{
+							note: {
+								    label: country_name+" has the Lowest "+vartext+" "+varsign+minxval+") and High Death Rate. Click on circle to see its Trend.",
+									bgPadding:5,
+									title: "Lowest "+vartext
+								  }	,
+							dx:vardx,//
+							dy:vardy, // dx and dy To increase Annotation line
+							x:Number(xrange(minxval))+delta,
+							y:Number(yrange(minyval))+delta,
+							className:"class_lowest_val_annotation",
+							connector: { end: "arrow" }
+							}
+						].map(function(d){ d.color = "darkgreen";return d})
+	highest_val_annotation = [
+							{
+							note: {
+								    label: country_name_max+" has the Highest Death Rate. ("+maxyval+") Click on circle to see its Trend.",
+									bgPadding:5,
+									title: "Highest Death Rate"
+								  }	,
+							dx:vard_dx, //vardx-250,//
+							dy:vard_dy, //-vardy-80, // dx and dy To increase Annotation line
+							x:Number(xrange(maxxval))+delta,
+							y:Number(yrange(maxyval))+delta,
+							className:"class_highest_val_annotation",
+							connector: { end: "arrow" }
+							}
+						].map(function(d){ d.color = "brown";return d})
+	const makeAnnotations_lowest_val = d3.annotation().editMode(true)
+																.notePadding(5)
+																.type(type_sec)
+																.annotations(lowest_val_annotation)
+	const makeAnnotations_highest_val = d3.annotation().editMode(true)
+																.notePadding(5)
+																.type(type_sec)
+																.annotations(highest_val_annotation)
+	d3.select('svg').append('g')
+	  .attr("class", "annotation-group2")
+	  .call(makeAnnotations_lowest_val)
+	d3.select('svg').append('g')
+	  .attr("class", "annotation-group3")
+	  .call(makeAnnotations_highest_val)
+}
+	function enabledisableAnnotation_Line(annotation_deathbirth_arr,xval,yval,ydval,dropdownsel)
 	{
+		const birth_anno_type = d3.annotationCallout
+		var birth_rate_annotations
+		var birtharr_len = annotation_deathbirth_arr.length
+		if (dropdownsel == "BirthRate") varheading = "Birth vs. Death Rate Analysis"
+		else if (dropdownsel == "LifeExp") varheading = "Life Expectancy Analysis"
+		else if (dropdownsel == "HealthSpend") varheading = "Health Spend Analysis"
+			birth_rate_annotations = [
+										{note: {
+											label: annotation_deathbirth_arr[0],
+											bgPadding:5,
+											title: "Birth Rate Analysis"
+											}	,
+											dx:10,//
+											dy:20, // dx and dy To increase Annotation line
+											x:xval-20,
+											y:yval+50,
+											className:"class_birth_rate_annotations",
+											connector: { end: "arrow" }
+										}
+									].map(function(d){ d.color = "darkorange";return d})
+			death_rate_annotations = [
+										{note: {
+											label: annotation_deathbirth_arr[1],
+											bgPadding:5,
+											title: "Death Rate Analysis"
+											}	,
+											dx:-60,//
+											dy:-50, // dx and dy To increase Annotation line
+											x:xval-160,
+											y:ydval+50,
+											className:"class_death_rate_annotations",
+											connector: { end: "arrow" }
+										}
+									].map(function(d){ d.color = "darkred";return d})
+			birthdeath_rate_annotations = [
+										{note: {
+											label: annotation_deathbirth_arr[2],
+											bgPadding:5,
+											title: "Death Rate and Birth Rate Analysis"
+											},
+											dx:-50,//
+											dy:30, // dx and dy To increase Annotation line
+											x:1000,//xval-560,
+											y:100, //yval+20,
+											wrap:360,
+											className:"class_birthdeath_rate_annotations",
+											connector: { end: "arrow" }
+										}
+									].map(function(d){ d.color = "darkblue";return d})
+		const make_birth_rate_annotations = d3.annotation().editMode(true)
+                             .notePadding(15)
+                             .type(birth_anno_type)
+                             .annotations(birth_rate_annotations)
+		const make_death_rate_annotations = d3.annotation().editMode(true)
+                             .notePadding(15)
+                             .type(birth_anno_type)
+                             .annotations(death_rate_annotations)
+		const make_birthdeath_rate_annotations = d3.annotation().editMode(true)
+                             .notePadding(15)
+                             .type(birth_anno_type)
+                             .annotations(birthdeath_rate_annotations)
+		// Plot Annotations
+		if (dropdownsel == "BirthRate") {
+			d3.select('svg').append('g')
+			  .attr("class", "annotation-birth-group")
+			  .call(make_birth_rate_annotations)
+			d3.select('svg').append('g')
+			  .attr("class", "annotation-death-group")
+			  .call(make_death_rate_annotations)
+		}
+		d3.select('svg').append('g')
+		  .attr("class", "annotation-group7")
+          .call(make_birthdeath_rate_annotations)
 	}
-    function plot_points(X_Col,selectedGrp)
+function plot_circles(X_Col,selectedGrp)
 	{
-	    //console.log("Year inside Plot Points:"+select_year)
-		//console.log("selectedGrp inside Plot Points:"+selectedGrp)
-        //d3.select("#chart").selectAll("circle").data(clear_all).exit().remove()
         let cur_x = 0
         let cur_y = 0
         let max_val = 0
+		var max_d_val = 0
 		let min_val = 1000 
+		var index_max_pos=0
+		var index_pos=0
+		d3.select("svg").selectAll(".xlabel").remove() // Clear Old Text before replacing it with the new one.
 		var xlabel = d3.select("svg").append("text").attr("class", "xlabel").attr("text-anchor", "end")
                        .attr("x", 1000)
-                       .attr("y", 1.75*margin+svg_dim+5	)
+                       .attr("y", 1.75*margin+svg_dim+5)
                        .style('fill', 'DarkGreen')
                        .style('font-weight', 'bold')
                        .text("Avg. Birth Rate (Per 1000 People)")
 		var yeartag = d3.select("svg").append("text").attr("class", "yeartag")
 		var ylabel = d3.select("svg").append("text").attr("class", "y label")
-		let select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0)})
+		y = d3.scaleLinear().domain([0,20]).range([height,0]) //0,20
 		if (selectedGrp == "BirthRate") {
-						select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(e["Avg_ Death Rate (Per 1000) (SUM)"]))})
+						select_year_data = data.filter(function(d){return (d.Year==select_year && d["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(d["Avg_ Death Rate (Per 1000) (SUM)"]) && !isNaN(d["Avg_ Birth Rate (Per 1000) (SUM)"]))})
+						select_yearrgn_data = select_year_data.filter(({Region}) => selected_region.includes(Region))
 						// Change the X Axis Label
 						d3.select("svg").selectAll(".xlabel.text").remove()
 						d3.select("svg").append("text").attr("class", "xlabel").attr("text-anchor", "end")
                           .attr("x", 1000)
-                          .attr("y", 1.75*margin+svg_dim+5	)
+                          .attr("y", 1.75*margin+svg_dim+5)
                           .style('fill', 'DarkGreen')
                           .style('font-weight', 'bold')
                           .text("Avg. Birth Rate (Per 1000 People)")
+						d3.select('svg').selectAll('.birthline1').remove();
+						d3.select('svg').selectAll('.birthline2').remove();
+						d3.select('svg').selectAll(".annotation-group").remove();
+						d3.select('svg').selectAll(".annotation-group1").remove();
+						d3.select(".annotation-group4").remove();
+						d3.select(".annotation-group5").remove();
+						d3.select(".annotation-group7").remove();
+						d3.select('svg').selectAll('.lifeexpline1').remove();
+						d3.select('svg').selectAll('.lifeexpline2').remove();
+						//enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange=x,min_val,index_pos,yrange=y)
 						}
 		else if (selectedGrp == "HealthSpend") {
-						select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Health Spend / Capita ($) (SUM)"] != 0 && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0)})
+						select_year_data = data.filter(function(d){return (d.Year==select_year && d["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(d["Avg_ Death Rate (Per 1000) (SUM)"]))})
+						select_yearrgn_data = select_year_data.filter(({Region}) => selected_region.includes(Region))
+						console.log("select_yearrgn_data:"+select_yearrgn_data.length)
 						// Change the X Axis Label
 						d3.select("svg").selectAll(".xlabel").remove() // Clear Old Text before replacing it with the new one.
 						d3.select("svg").append("text").attr("class", "xlabel").attr("text-anchor", "end")
                           .attr("x", 1000)
-                          .attr("y", 1.75*margin+svg_dim+5	)
+                          .attr("y", 1.75*margin+svg_dim+5)
                           .style('fill', 'DarkGreen')
                           .style('font-weight', 'bold')
                           .text("Avg. Health Spend Per Capita (In US $)")
+						d3.select('svg').selectAll('.birthline1').remove();
+						d3.select('svg').selectAll('.birthline2').remove();
+						d3.select('svg').selectAll(".annotation-group").remove();
+						d3.select('svg').selectAll(".annotation-group1").remove();
+						d3.select(".annotation-group4").remove();
+						d3.select(".annotation-group5").remove();
+						d3.select(".annotation-group7").remove();
+						d3.select('svg').selectAll('.lifeexpline1').remove();
+						d3.select('svg').selectAll('.lifeexpline2').remove();
 						}
 		else if (selectedGrp == "LifeExp") {
-						select_year_data = data.filter(function(e){return (e.Year==select_year && e["Avg_ Life Expectancy (SUM)"] != 0 && e["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(e["Avg_ Life Expectancy (SUM)"]))})
+						select_year_data = data.filter(function(d){return (d.Year==select_year && d["Avg_ Death Rate (Per 1000) (SUM)"] != 0 && !isNaN(d["Avg_ Life Expectancy (SUM)"]) && !isNaN(d["Avg_ Death Rate (Per 1000) (SUM)"]))})
+						select_yearrgn_data = select_year_data.filter(({Region}) => selected_region.includes(Region))
 						// Change the X Axis Label
-						//xlabel.selectAll(".text.xlabel").remove() // Clear Old Text before replacing it with the new one.
 						d3.select("svg").selectAll(".xlabel").remove() // Clear Old Text before replacing it with the new one.
 						d3.select("svg").append("text").attr("class", "xlabel").attr("text-anchor", "end")
                           .attr("x", 1000)
-                          .attr("y", 1.75*margin+svg_dim+5	)
+                          .attr("y", 1.75*margin+svg_dim+5)
                           .style('fill', 'DarkGreen')
                           .style('font-weight', 'bold')
-                          .text("Avg. Life Expectancy")
+                          .text("Avg. Life Expectancy (Age in Years)")
+						d3.select('svg').selectAll('.birthline1').remove();
+						d3.select('svg').selectAll('.birthline2').remove();
+						d3.select('svg').selectAll(".annotation-group").remove();
+						d3.select('svg').selectAll(".annotation-group1").remove();
+						d3.select(".annotation-group4").remove();
+						d3.select(".annotation-group5").remove();
+						d3.select(".annotation-group7").remove();
+						d3.select('svg').selectAll('.lifeexpline1').remove();
+						d3.select('svg').selectAll('.lifeexpline2').remove();
 						}
-		
-        //let select_year_data = data.filter(({ Region, Year}) => selected_region.includes(Region) && Year==select_year )
-        //let select_year_region_data = data.filter(({ Region, Year }) => selected_region.includes(Region) && Year==select_year)
-        for(i=0; i < select_year_data.length; i++){
-            let xcol = Number(select_year_data[i][X_Col])
-            let death_rate = Number(select_year_data[i]["Avg_ Death Rate (Per 1000) (SUM)"]);
-            let country = select_year_data[i]["Country Code (WDICountry_csv)"]
-			let country_name = select_year_data[i]["Country Name"]
-            let region = select_year_data[i]["Region"]
+        for(i=0; i < select_yearrgn_data.length; i++)
+		{
+            var xcol = Number(select_yearrgn_data[i][X_Col]) || 0
+			var death_rate = Number(select_yearrgn_data[i]["Avg_ Death Rate (Per 1000) (SUM)"]);
+			var country = select_yearrgn_data[i]["Country Code (WDICountry_csv)"]
+			var country_name = select_yearrgn_data[i]["Country Name"]
+			var region = select_yearrgn_data[i]["Region"]
 			
-			if (country == "") {console.log("country,xcol:"+country+xcol)}
-			
-			max_col_val = Number(select_year_data[i][X_Col]);
-			min_col_val = Number(select_year_data[i][X_Col]);
+			max_col_val = xcol;
+			min_col_val = xcol;
 
-            if(min_col_val < min_val && min_col_val!= 0) min_val = min_col_val;
+            if(min_col_val < min_val && min_col_val!= 0) {
+								min_val = min_col_val;
+								index_pos = i;
+			}
             if(max_col_val > max_val && max_col_val!= 0) max_val = max_col_val;
-			if (selectedGrp == "BirthRate") {
-			    x = d3.scaleLinear().domain([4,max_val+5]).range([0,width])
+			if (death_rate > max_d_val) {
+				max_d_val = death_rate
+				index_max_pos=i;
 			}
-			else if (selectedGrp == "LifeExp") {
-			    x = d3.scaleLinear().domain([42,max_val+5]).range([0,width]);
-			}
-			else if (selectedGrp == "HealthSpend") {x = d3.scaleLog().domain([10,max_val+500]).range([0,width])}
+		}
+		if (selectedGrp == "BirthRate") 
+		{
+			x = d3.scaleLinear().domain([4,max_val+5]).range([0,width]);
+			textlabel = "The Scatter Chart on Left shows the Death Rate and Birth Rate Comparison Over the Years"
+		}
+		else if (selectedGrp == "HealthSpend") 
+		{
+			x = d3.scaleLog().domain([10,max_val+500]).range([0,width]);
+			textlabel = "The Scatter Chart on Left shows the Death Rate and Health Spend Per Capita Comparison Over the Years"
+		}
+		else if (selectedGrp == "LifeExp") 
+		{
+			x = d3.scaleLinear().domain([42,max_val+5]).range([0,width]);
+			textlabel = "The Scatter Chart on Left shows the Death Rate and Life Expectancy Comparison Over the Years"
+		}
+		for (i=0; i < select_year_data.length; i++)
+		{
+			var xcol = Number(select_year_data[i][X_Col]) || 0
+			var country = select_year_data[i]["Country Code (WDICountry_csv)"]
+			var region = select_year_data[i]["Region"]
+			var death_rate = Number(select_year_data[i]["Avg_ Death Rate (Per 1000) (SUM)"]);
 
             const t = d3.transition()
                 .duration(2000).delay(100)
                 .ease(d3.easeLinear);
-
-            if(selected_region.indexOf(region)>-1 && xcol != 0)
+			
+            if(selected_region.indexOf(region)>-1 && xcol != '')
 			{
-                d3.select("#" + country).attr("opacity",0.8);
+                d3.select("#" + country).attr("opacity",0.65);
 				d3.select("#" + country).style("visibility","visible") 
 				d3.select("#" + country ).datum(select_year_data[i])
 			}
             else
-                //d3.select("#" + country).attr("opacity",0)
+			{
+                d3.select("#" + country).attr("opacity",0)
 				d3.select("#" + country).style("visibility","hidden") // To make sure when mousehover happens nothing is visible.
+				d3.select('svg').selectAll('.birthline1').remove();
+				d3.select('svg').selectAll('.birthline2').remove();
+				d3.select('svg').selectAll('.lifeexpline1').remove();
+				d3.select('svg').selectAll('.lifeexpline2').remove();
+				d3.select(".annotation-group").remove();
+				d3.select(".annotation-group1").remove();
+				//d3.select(".annotation-group2").remove(); //Commented because Health Spend has some blank rows
+				//d3.select(".annotation-group3").remove(); //Commented because Health Spend has some blank rows
+				d3.select(".annotation-group4").remove();
+				d3.select(".annotation-group5").remove();
+				d3.select(".annotation-group7").remove();
 				// opacity Zero does disappers the circle but mousehover can still happens
-				
-				
-			d3.select("#" + country ).transition(t).attr("transform", "translate(" + x(xcol) + "," + y(death_rate) + ")")
-			
-            //if (xcol != 0 && selected_region.indexOf(region)>-1) {
-            //        d3.select("#" + country ).datum(select_year_data[i])
-			//}
-        }
+			}	
+			if (xcol != '') {
+				d3.select("#" + country ).transition(t).attr("transform", "translate(" + x(xcol) + "," + y(death_rate) + ")")
+			}
+		}
 		// Re-Plot X Axis again
         d3.select('svg').selectAll('g.xaxis').transition().duration(1000).call(d3.axisBottom(x).tickFormat(d3.format("~d")));
 		// Set the Year Label as per the Selection
 		d3.select('svg').selectAll('.yeartag').text(select_year);
+		// Clear the Annotations before redrawing them
+		d3.select(".annotation-group").remove();
+		//d3.select(".annotation-group1").remove();
+		d3.select(".annotation-group2").remove();
+		d3.select(".annotation-group3").remove();
+		d3.select(".annotation-group4").remove();
+		d3.select(".annotation-group5").remove();
+		d3.select(".annotation-group6").remove();
+		d3.select(".annotation-group7").remove();
+		d3.select('svg').selectAll('.lifeexpline1').remove();
+		d3.select('svg').selectAll('.lifeexpline2').remove();
+		enabledisableAnnotation_Scatter(select_yearrgn_data,selectedGrp,xrange=x,index_pos,yrange=y,index_max_pos,selected_region.length)
+		var secondsvg = d3.select('#linesvg')
+		secondsvg.select('.SecondSVGHeadingText1').remove()
+		 secondsvg.append("text")
+	         .text(textlabel)
+	         .attr("class", "SecondSVGHeadingText1")
+             .style('fill', 'DarkGreen')
+	         .style('font-size',"20px")
+			 .style('opacity',0.9)
+			 .attr('x',15)
+			 .attr('y',40)
+			 .call(wrap, 320)
     }	
 </script>
 </body>
