@@ -3,7 +3,6 @@
 <head><title>CS416-Narrative Visualization Dashboard</title></head>
 <script src='https://d3js.org/d3.v5.min.js'></script>
 <script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
-<link href='https://fonts.googleapis.com/css?family=Lato:300,900' rel='stylesheet' type='text/css'>
 <style>
  div.tooltip {
         position: absolute;
@@ -41,20 +40,13 @@
         border-radius: 8px;
         pointer-events: none;
     }
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background-color: #f1f1f1;
-  min-width: 160px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 1;
-}
-  /* .rect_bar {fill: pink; stroke: black; opacity: 0.35} */
     svg {
         background-color: GhostWhite;
         font-family: 'Lato';
+		font-weight: 500;
+		font-style: normal;
+		
     }
-
     .annotation-group, text.title {
         font-size: .8em;
     }
@@ -70,17 +62,15 @@
 	line {
        stroke:#eae4e4;
      }
-     .annotation-title {
+    .annotation-title {
         font-weight: bold;
-      }
+    }
 
-       circle.handle {
-        stroke-dasharray: 5;
-        stroke: var(--annotation-color);
-        fill: rgba(255, 255, 255, .5);
-        cursor: move;
-
-        stroke-opacity: .4;
+    circle.handle {
+      stroke-dasharray: 5;
+      stroke: var(--annotation-color);
+      cursor: move;
+      stroke-opacity: .4;
       }
 
       circle.handle.highlight {
@@ -91,7 +81,7 @@
           fill: rgba(255, 255, 255, 0);
         }
     text.title {
-        font-size: .10em;
+        font-size: .12em;
     }
 .header img {
 		float: left;
