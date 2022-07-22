@@ -1326,7 +1326,6 @@ function RegionSelected(object)
 function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,index_pos,yrange,index_max_pos,regionslen)
 {
 	 let chart = d3.select("#chart")
-	 //const type = d3.annotationXYThreshold
 	 const type_sec = d3.annotationCallout
 	 const type_rec = d3.annotationCalloutRect
 	 var minxval = 0, minyval=0
@@ -1617,7 +1616,7 @@ function enabledisableAnnotation_Line(annotation_deathbirth_arr,xval,yval,ydval,
 		const birth_anno_type = d3.annotationCallout
 		var birth_rate_annotations
 		var birtharr_len = annotation_deathbirth_arr.length
-		if (dropdownsel == "BirthRate") varheading = "Birth vs. Death Rate Analysis"
+		if (dropdownsel == "BirthRate") varheading = "Birth Rate vs. Death Rate Analysis"
 		else if (dropdownsel == "LifeExp") varheading = "Life Expectancy Analysis"
 		else if (dropdownsel == "HealthSpend") varheading = "Health Spend Analysis"
 			birth_rate_annotations = [
@@ -1652,7 +1651,7 @@ function enabledisableAnnotation_Line(annotation_deathbirth_arr,xval,yval,ydval,
 										{note: {
 											label: annotation_deathbirth_arr[2],
 											bgPadding:5,
-											title: "Death Rate and Birth Rate Analysis"
+											title: varheading //"Death Rate and Birth Rate Analysis"
 											},
 											dx:-50,//
 											dy:30, // dx and dy To increase Annotation line
