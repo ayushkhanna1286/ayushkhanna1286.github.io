@@ -1353,7 +1353,7 @@ function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,ind
 			delta=40
 			const high_deathbirth_rate_annotations = [{
 				   note: {
-						 label: "Sub-Saharan Africa Countries have High Birth (>35) and Death Rates (>10) over the Years.Click on Rectangle to hide it and start exploring details for such countries",
+						 label: "Sub-Saharan Africa Countries have High Birth (>35) and Death Rates (>10) over the Years.Click to Hide.",
 						 bgPadding: 5,
 						 title: "High Death and Birth Rate"
 				   },
@@ -1371,7 +1371,7 @@ function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,ind
 			 }].map(function(d){ d.color = "darkorange";return d})
 			 const high_deathrate = [{
 				   note: {
-						 label: "Countries Observed a Decrease in Population due to Higher Death Rate than Birth Rate. Click on Rectangle to hide it and start exploring details for such countries",
+						 label: "Countries Observed a Decrease in Population due to Higher Death Rate than Birth Rate. Click to Hide.",
 						 bgPadding: 1,
 						 title: "Decrease in the Population"
 				   },
@@ -1453,7 +1453,7 @@ function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,ind
 			delta=40
 			const high_healthspend = [{
 				   note: {
-						 label: "Countries that are spending the most in Healthcare have lower deaths than countries with less spend on Healthcare",
+						 label: "Countries that are spending the most in Healthcare have lower deaths than countries with less spend on Healthcare. Click to Hide.",
 						 bgPadding: 1,
 						 title: "High HealthSpend Per Capita"
 				   },
@@ -1514,7 +1514,7 @@ function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,ind
 				 .style("stroke", "grey")
 			const high_deathlifeexp_rate_annotations = [{
 			   note: {
-				 label: "Countries inside this section have Higher Death rate (>10) and also lower Life Expectancy (<55)",
+				 label: "Countries inside this section have Higher Death rate (>10) and also lower Life Expectancy (<55). Click to Hide.",
 				 bgPadding: 5,
 				 title: "Higher Deaths and Lower Life Expectancy"
 			   },
@@ -1532,7 +1532,7 @@ function enabledisableAnnotation_Scatter(select_year_data,selectedGrp,xrange,ind
 									 .annotations(high_deathlifeexp_rate_annotations)
 			const low_death_highlifeexp_rate_annotations = [{
 			   note: {
-				 label: "Countries with Higher Life Expectancy have seen a Lower Death Rate",
+				 label: "Countries with Higher Life Expectancy have seen a Lower Death Rate. Click to Hide.",
 				 bgPadding: 5,
 				 title: "Lower Deaths and Higher Life Expectancy"
 			   },
