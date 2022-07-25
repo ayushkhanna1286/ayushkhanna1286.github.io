@@ -102,10 +102,10 @@
 <img src="https://ayushkhanna1286.github.io/UIUC-Logo.png"/>
 <h1> World Indicators - Countries Comparison of Death Rate with Birth Rate, Health Spend and Life Expectancy</h1>
 <a href="https://datatopics.worldbank.org/world-development-indicators/"target="_blank">[DataSet Source - World Development Indicator]</a>
-</br>
-</br>
 </div> 
-
+</br></br>
+<svg id="main" width=1500 height=700></svg>
+<svg id="linesvg" width=370 height=700></svg>
 <!-- Initialize a select button -->
 <!-- <div><select id="selectxdropdown"></select></div> -->
 <div id="radiobutton">
@@ -114,9 +114,6 @@
   <input type="radio" id="selectxdropdown "name="Xaxis" value="HealthSpend" onclick='get_radiovalue("HealthSpend")'> Health Spend
   <input type="radio" id="selectxdropdown" name="Xaxis" value="LifeExp" onclick='get_radiovalue("LifeExp")'> Life Expectancy
 </div>
-</br>
-<svg id="main" width=1500 height=700></svg>
-<svg id="linesvg" width=370 height=700></svg>
 <script>
 	 let selected_regions = []
 	 let tickval = []
