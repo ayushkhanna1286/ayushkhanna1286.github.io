@@ -647,11 +647,10 @@ async function init() {
             .attr('stroke', 'grey')
             .attr('fill', function(d,i) {
                     if(d=="<<=" || d=="=>>") return("lightyellow")
-                    if(Number(d)===2010) return('#177245');
-                          else return ('#a9a9a9');
+                    if(Number(d)===2010) return('#177245'); else return ('#a9a9a9');
                  })
             .on('click', function(d,i)
-            {
+            {  // Make sure the click on arrow keeps only one year highlighted
                d3.selectAll("rect").attr("fill", function(d) {
                     if(d=="=>>" || d=="<<=") return ("lightyellow");
                     else return ("#a9a9a9")
@@ -659,19 +658,20 @@ async function init() {
 
                d3.select(this).attr("fill", function(d){
                     if(d=="=>>" || d=="<<=") 
-					return ("lightyellow");
-                    else return ("#177245")
+					return ("lightyellow"); // If it's arrow keep it LightYellow
+                    else return ("#177245") // Highlight the Year Selected
                })
                if(d=="=>>")
-			   {
+			   {    // Find the Next Year Value
                     let year_index = years.indexOf(select_year)
                     if(year_index < (years.length - 2)) select_year = years[year_index+1]
                }
-               else if(d=="<<="){
+               else if(d=="<<=")
+			   {	// Find the Previous Year Value
                     let year_index = years.indexOf(select_year)
                     if(year_index > 1) select_year = years[year_index-1]
                }
-               else select_year = Number(d);
+               else select_year = Number(d); // If Year is Selected directly, consider the value directly
                let id_selected = "#year" + String(select_year)
 			   d3.select(id_selected).attr("fill", "#177245")
 			   var selectedOption = d3.select('input[name="Xaxis"]:checked').node().value;
