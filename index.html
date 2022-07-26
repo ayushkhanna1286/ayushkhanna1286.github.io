@@ -1629,7 +1629,7 @@ function enabledisableAnnotation_Line(annotation_deathbirth_arr,xval,yval,ydval,
 											className:"class_birth_rate_annotations",
 											connector: { end: "arrow" }
 										}
-									].map(function(d){ d.color = "darkorange";return d})
+									].map(function(d){ d.color = "darkgreen";return d})
 			death_rate_annotations = [
 										{note: {
 											label: annotation_deathbirth_arr[1],
@@ -1658,7 +1658,7 @@ function enabledisableAnnotation_Line(annotation_deathbirth_arr,xval,yval,ydval,
 											className:"class_birthdeath_rate_annotations",
 											connector: { end: "arrow" }
 										}
-									].map(function(d){ d.color = "darkblue";return d})
+									].map(function(d){ d.color = "darkorange";return d})
 		const make_birth_rate_annotations = d3.annotation().editMode(true)
                              .notePadding(15)
                              .type(birth_anno_type)
